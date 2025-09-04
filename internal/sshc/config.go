@@ -117,9 +117,9 @@ func saveConfig(host *Host, configPath string) error {
 	addField("IdentityFile", host.IdentityFile)
 	addField("ConnectTimeout", host.Timeout)
 
-	// Define whitelist for fields that can have multiple values (append instead of replace)
+	// TODO: Allow multiple fields with same key
 	appendOnlyFields := map[string]bool{
-		"IdentityFile": true,
+		//"IdentityFile": true,
 	}
 
 	// Find existing host configuration
