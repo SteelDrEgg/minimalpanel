@@ -2,10 +2,12 @@ package sshc
 
 import (
 	"fmt"
-	"github.com/kevinburke/ssh_config"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
+	"log"
+	"net"
 	"os"
+	"time"
 )
 
 type Host struct {
@@ -14,7 +16,12 @@ type Host struct {
 	Port         string
 	Hostname     string
 	IdentityFile string
-	Timeout      string
+	Timeout      time.Duration
+}
+
+type identity struct {
+	keyPath    string
+	passphrase string
 }
 
 // String implements fmt.Stringer interface for pretty printing
@@ -23,61 +30,16 @@ func (h *Host) String() string {
 		h.User, h.Host, h.Hostname, h.Port, h.IdentityFile, h.Timeout)
 }
 
-// loadConfig loads SSH configuration for a specific host from SSH config file
-// hostAlias: the SSH host alias to look up
-// configPath: optional path to SSH config file (empty string uses default ~/.ssh/config)
-// Returns a Host struct with all relevant configuration options
-func loadConfig(hostAlias string, configPath string) (*Host, error) {
-	if configPath == "" {
-		configPath = "$HOME/.ssh/config"
-	}
-	configPath = os.ExpandEnv(configPath)
-
-	// Read config
-	f, err := os.Open(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open SSH config file %s: %w", configPath, err)
-	}
-	defer f.Close()
-	// Parse config
-	sshConfig, err := ssh_config.Decode(f)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse SSH config: %w", err)
-	}
-
-	// Helper function to get config value with default
-	getValue := func(key, defaultValue string) string {
-		value, _ := sshConfig.Get(hostAlias, key)
-		if value == "" {
-			return defaultValue
-		}
-		return value
-	}
-
-	host := &Host{
-		Host:         hostAlias,
-		User:         getValue("User", os.Getenv("USER")),
-		Hostname:     getValue("HostName", hostAlias),
-		Port:         getValue("Port", "22"),
-		IdentityFile: getValue("IdentityFile", "$HOME/.ssh/id_rsa"),
-		Timeout:      getValue("ConnectTimeout", "10"),
-	}
-
-	host.IdentityFile = os.ExpandEnv(host.IdentityFile)
-
-	return host, nil
-}
-
-// loadCert loads a private key for SSH authentication
+// loadKey loads a private key for SSH authentication
 // keyPath: path to the private key file
 // passphrase: optional passphrase for encrypted keys (can be nil or empty)
 // Returns ssh.Signer and error
-func loadCert(keyPath string, passphrase string) (ssh.Signer, error) {
-	if keyPath == "" {
+func loadKey(key *identity) (ssh.Signer, error) {
+	if key.keyPath == "" {
 		// This probably won't work for www user
-		keyPath = "$HOME/.ssh/id_rsa"
+		key.keyPath = "$HOME/.ssh/id_rsa"
 	}
-	keyPath = os.ExpandEnv(keyPath)
+	keyPath := os.ExpandEnv(key.keyPath)
 
 	// Check if exists
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
@@ -92,8 +54,8 @@ func loadCert(keyPath string, passphrase string) (ssh.Signer, error) {
 
 	// Parse key
 	var signer ssh.Signer
-	if len(passphrase) > 0 {
-		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(passphrase))
+	if len(key.passphrase) > 0 {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(key.passphrase))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse private key with passphrase: %w", err)
 		}
@@ -106,67 +68,75 @@ func loadCert(keyPath string, passphrase string) (ssh.Signer, error) {
 	return signer, nil
 }
 
-func login() {
+// login creates SSH authentication methods based on provided credentials
+// password: optional password for password authentication
+// identities: optional slice of identity structs for public key authentication
+// Returns a slice of ssh.AuthMethod that can be used for SSH authentication
+func login(password string, identities []*identity) ([]ssh.AuthMethod, error) {
+	var authMethods []ssh.AuthMethod
 
+	// Add password authentication if password is provided
+	if password != "" {
+		authMethods = append(authMethods, ssh.Password(password))
+	}
+
+	// Add public key authentication for each identity
+	for _, id := range identities {
+		if id == nil {
+			continue
+		}
+
+		signer, err := loadKey(id)
+		if err != nil {
+			// Log the error but continue with other authentication methods
+			log.Printf("Failed to load key from %s: %v", id.keyPath, err)
+			continue
+		}
+
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
+	}
+
+	// Return error if no authentication methods were successfully created
+	if len(authMethods) == 0 {
+		return nil, fmt.Errorf("no valid authentication methods available")
+	}
+
+	return authMethods, nil
 }
 
 func Client() {
-	host, err := loadConfig("claw1", "")
-	if err != nil {
-		fmt.Printf("Error loading config: %v\n", err)
-		return
+	key, _ := login("", []*identity{&identity{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
+	config, _ := loadConfig("claw1", "")
+	sshConfig := &ssh.ClientConfig{
+		User:            config.User,
+		Auth:            key,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         config.Timeout,
 	}
 
-	// 打印 Host 信息
-	fmt.Println("Loaded SSH Host configuration:")
-	fmt.Println(host)
-	////host, err := loadConfig("claw1", "")  // 使用默认配置文件
-	////host, err := loadConfig("claw1", "/path/to/custom/ssh_config")  // 使用自定义配置文件
-	//user := "root"
-	//hostName := "47.251.7.109"
-	////passwd := "f0E97Y+l[5IRhz"
-	//host := "claw1"
-	//key, _ := loadCert("", "bill1212")
-	//sshClientConfig := &ssh.ClientConfig{
-	//	User: user,
-	//	Auth: []ssh.AuthMethod{
-	//		ssh.PublicKeys(key),
-	//		//ssh.Password(passwd),
-	//	},
-	//	HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	//	Timeout:         5 * time.Second,
-	//}
-	//address := net.JoinHostPort(hostName, "22")
-	//client, err := ssh.Dial("tcp", address, sshClientConfig)
-	//if err != nil {
-	//	log.Fatalf("Failed to connect to %s: %s", host, err)
-	//}
-	//
-	//fmt.Printf("Connected to %s\n", host)
-	//defer client.Close()
-	//
-	//// 创建 SSH 会话
-	//session, err := client.NewSession()
-	//if err != nil {
-	//	log.Fatalf("failed to create session: %s", err)
-	//}
-	//defer session.Close()
-	//
-	//// 在远程机器上运行命令
-	//stdout, err := session.StdoutPipe()
-	//if err != nil {
-	//	log.Fatalf("failed to get stdout: %s", err)
-	//}
-	//if err := session.Start("ls"); err != nil {
-	//	log.Fatalf("failed to start command: %s", err)
-	//}
-	//
-	//output, err := ioutil.ReadAll(stdout)
-	//if err != nil {
-	//	log.Fatalf("无法读取 stdout：％s", err)
-	//}
-	//if err := session.Wait(); err != nil {
-	//	log.Fatalf("命令失败：％s", err)
-	//}
-	//fmt.Println(string(output))
+	addr := net.JoinHostPort(config.Hostname, config.Port)
+	client, err := ssh.Dial("tcp", addr, sshConfig)
+	if err != nil {
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+
+	// 在远程机器上运行命令
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		log.Fatalf("failed to get stdout: %s", err)
+	}
+	if err := session.Start("ls"); err != nil {
+		log.Fatalf("failed to start command: %s", err)
+	}
+
+	output, err := ioutil.ReadAll(stdout)
+	if err != nil {
+		log.Fatalf("无法读取 stdout：％s", err)
+	}
+	if err := session.Wait(); err != nil {
+		log.Fatalf("命令失败：％s", err)
+	}
+	fmt.Println(string(output))
 }
