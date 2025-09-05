@@ -3,6 +3,7 @@ package sshc
 import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -68,11 +69,11 @@ func loadKey(key *identity) (ssh.Signer, error) {
 	return signer, nil
 }
 
-// login creates SSH authentication methods based on provided credentials
+// loadAuth creates SSH authentication methods based on provided credentials
 // password: optional password for password authentication
 // identities: optional slice of identity structs for public key authentication
 // Returns a slice of ssh.AuthMethod that can be used for SSH authentication
-func login(password string, identities []*identity) ([]ssh.AuthMethod, error) {
+func loadAuth(password string, identities []*identity) ([]ssh.AuthMethod, error) {
 	var authMethods []ssh.AuthMethod
 
 	// Add password authentication if password is provided
@@ -104,39 +105,58 @@ func login(password string, identities []*identity) ([]ssh.AuthMethod, error) {
 	return authMethods, nil
 }
 
-func Client() {
-	key, _ := login("", []*identity{&identity{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
-	config, _ := loadConfig("claw1", "")
+// connect creates SSH connection
+// host: host information for connection
+// auth: credential for connection
+// Returns pointer to ssh connection
+func connect(host *Host, auth []ssh.AuthMethod) (*ssh.Client, error) {
 	sshConfig := &ssh.ClientConfig{
-		User:            config.User,
-		Auth:            key,
+		User:            host.User,
+		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         config.Timeout,
+		Timeout:         host.Timeout,
 	}
+	addr := net.JoinHostPort(host.Hostname, host.Port)
 
-	addr := net.JoinHostPort(config.Hostname, config.Port)
 	client, err := ssh.Dial("tcp", addr, sshConfig)
 	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to %s: %v\n", addr, err)
+	}
+
+	return client, err
+}
+
+func Client() {
+	key, _ := loadAuth("", []*identity{{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
+	config, _ := loadConfig("claw1", "")
+	client, err := connect(config, key)
+	if err != nil {
+		fmt.Println("Failed to connect to Claw1")
+		os.Exit(1)
 	}
 	defer client.Close()
 
 	session, err := client.NewSession()
 
-	// 在远程机器上运行命令
-	stdout, err := session.StdoutPipe()
-	if err != nil {
-		log.Fatalf("failed to get stdout: %s", err)
-	}
-	if err := session.Start("ls"); err != nil {
-		log.Fatalf("failed to start command: %s", err)
-	}
+	stdin, stdout, err := setupTerminal(session, 10, 5)
+	fmt.Println("stdin, stdout successfully created")
+	session.Shell()
 
-	output, err := ioutil.ReadAll(stdout)
-	if err != nil {
-		log.Fatalf("无法读取 stdout：％s", err)
+	stdin.Write([]byte("ls\n"))
+	fmt.Println("command wrote")
+	//TODO: never reach EOF, fix it
+	for {
+		buffer := make([]byte, 1024)
+		_, err = stdout.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+		}
+		fmt.Println(string(buffer))
 	}
-	if err := session.Wait(); err != nil {
-		log.Fatalf("命令失败：％s", err)
-	}
-	fmt.Println(string(output))
+	fmt.Println("session closed")
+	session.Close()
+	return
 }
