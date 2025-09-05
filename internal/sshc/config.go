@@ -3,10 +3,12 @@ package sshc
 import (
 	"fmt"
 	"github.com/kevinburke/ssh_config"
+	"github.com/spf13/cast"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // loadConfig loads SSH configuration for a specific host from SSH config file
@@ -46,7 +48,7 @@ func loadConfig(hostAlias string, configPath string) (*Host, error) {
 		Hostname:     getValue("HostName", hostAlias),
 		Port:         getValue("Port", "22"),
 		IdentityFile: getValue("IdentityFile", "$HOME/.ssh/id_rsa"),
-		Timeout:      getValue("ConnectTimeout", "10"),
+		Timeout:      cast.ToDuration(getValue("ConnectTimeout", "10")) * time.Second,
 	}
 
 	host.IdentityFile = os.ExpandEnv(host.IdentityFile)
@@ -115,7 +117,7 @@ func saveConfig(host *Host, configPath string) error {
 	}
 	addField("Port", host.Port)
 	addField("IdentityFile", host.IdentityFile)
-	addField("ConnectTimeout", host.Timeout)
+	addField("ConnectTimeout", cast.ToString(host.Timeout))
 
 	// TODO: Allow multiple fields with same key
 	appendOnlyFields := map[string]bool{
