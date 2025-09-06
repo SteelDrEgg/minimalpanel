@@ -1,6 +1,7 @@
 package sshc
 
 import (
+	"bufio"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -126,6 +127,21 @@ func connect(host *Host, auth []ssh.AuthMethod) (*ssh.Client, error) {
 	return client, err
 }
 
+func stdoutPrint(stdout io.Reader) {
+	for {
+		buffer := make([]byte, 1024)
+		_, err := stdout.Read(buffer)
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+				break
+			}
+		}
+		fmt.Println(string(buffer))
+	}
+}
+
+// TODO: not done yet, continue working on it
 func Client() {
 	key, _ := loadAuth("", []*identity{{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
 	config, _ := loadConfig("claw1", "")
@@ -138,24 +154,20 @@ func Client() {
 
 	session, err := client.NewSession()
 
-	stdin, stdout, err := setupTerminal(session, 10, 5)
-	fmt.Println("stdin, stdout successfully created")
+	stdin, stdout, err := setupTerminal(session, 10, 20)
 	session.Shell()
 
-	stdin.Write([]byte("ls\n"))
-	fmt.Println("command wrote")
-	//TODO: never reach EOF, fix it
+	go stdoutPrint(stdout)
 	for {
-		buffer := make([]byte, 1024)
-		_, err = stdout.Read(buffer)
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-				break
-			}
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		if text == "wc" {
+			session.WindowChange(10, 50)
+		} else {
+			stdin.Write([]byte(text))
 		}
-		fmt.Println(string(buffer))
 	}
+
 	fmt.Println("session closed")
 	session.Close()
 	return
