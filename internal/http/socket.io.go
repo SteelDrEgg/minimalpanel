@@ -11,7 +11,7 @@ import (
 // Socket represents a wrapper around the Socket.IO server
 type Socket struct {
 	sock       *socket.Server
-	namespaces map[string]Namespace
+	Namespaces map[string]Namespace
 }
 
 // Initialize configures and creates the Socket.IO server
@@ -23,14 +23,14 @@ func (self *Socket) Initialize() {
 		engine.WebSocket, // WebSocket transport for real-time communication
 	))
 	self.sock = socket.NewServer(nil, opts)
-	self.namespaces = make(map[string]Namespace)
+	self.Namespaces = make(map[string]Namespace)
 }
 
 // AddNamespace creates a new Socket.IO namespace and adds it to the server
 func (self *Socket) AddNamespace(name string) {
 	namespace := Namespace{namespace: self.sock.Of(name, nil)}
 	namespace.Initialize()
-	self.namespaces[name] = namespace
+	self.Namespaces[name] = namespace
 }
 
 // Handler returns an HTTP handler for the Socket.IO server
@@ -52,13 +52,13 @@ func (self *Namespace) Initialize() {
 	}
 }
 
-// addEvent registers a custom event handler for the namespace
-func (self *Namespace) addEvent(event string, f func(*socket.Socket, ...any)) {
+// AddEvent registers a custom event handler for the namespace
+func (self *Namespace) AddEvent(event string, f func(*socket.Socket, ...any)) {
 	self.events[event] = f
 }
 
-// registerEvents activates all the event handlers for new client connections
-func (self *Namespace) registerEvents() {
+// RegisterEvents activates all the event handlers for new client connections
+func (self *Namespace) RegisterEvents() {
 	self.namespace.On("connection", func(clients ...any) {
 		client := clients[0].(*socket.Socket)
 		for event, f := range self.events {
@@ -67,24 +67,25 @@ func (self *Namespace) registerEvents() {
 	})
 }
 
-// addMiddleware adds a middleware to the namespace
-func (self *Namespace) addMiddleware(f func(client *socket.Socket, next func(*socket.ExtendedError))) {
+// AddMiddleware adds a middleware to the namespace
+func (self *Namespace) AddMiddleware(f func(client *socket.Socket, next func(*socket.ExtendedError))) {
 	self.namespace.Use(f)
 }
 
+// Test function, ignore this
 func Start(addr string) error {
 	server := new(Socket)
 	server.Initialize()
 	server.AddNamespace("/ttt")
 
-	defaultNamespace := server.namespaces["/ttt"]
+	defaultNamespace := server.Namespaces["/ttt"]
 
-	defaultNamespace.addEvent("message", func(client *socket.Socket, data ...any) {
+	defaultNamespace.AddEvent("message", func(client *socket.Socket, data ...any) {
 		client.Emit("message", data...)
 	})
-	defaultNamespace.registerEvents()
+	defaultNamespace.RegisterEvents()
 
-	defaultNamespace.addMiddleware(func(client *socket.Socket, next func(*socket.ExtendedError)) {
+	defaultNamespace.AddMiddleware(func(client *socket.Socket, next func(*socket.ExtendedError)) {
 		fmt.Println(client.Handshake().Auth)
 		next(nil)
 	})
