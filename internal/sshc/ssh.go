@@ -21,8 +21,8 @@ type Host struct {
 }
 
 type Identity struct {
-	keyPath    string
-	passphrase string
+	KeyPath    string
+	Passphrase string
 }
 
 // String implements fmt.Stringer interface for pretty printing
@@ -32,15 +32,15 @@ func (h *Host) String() string {
 }
 
 // LoadKey loads a private key for SSH authentication
-// keyPath: path to the private key file
-// passphrase: optional passphrase for encrypted keys (can be nil or empty)
+// KeyPath: path to the private key file
+// Passphrase: optional Passphrase for encrypted keys (can be nil or empty)
 // Returns ssh.Signer and error
 func LoadKey(key *Identity) (ssh.Signer, error) {
-	if key.keyPath == "" {
+	if key.KeyPath == "" {
 		// This probably won't work for www user
-		key.keyPath = "$HOME/.ssh/id_rsa"
+		key.KeyPath = "$HOME/.ssh/id_rsa"
 	}
-	keyPath := os.ExpandEnv(key.keyPath)
+	keyPath := os.ExpandEnv(key.KeyPath)
 
 	// Check if exists
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
@@ -55,15 +55,15 @@ func LoadKey(key *Identity) (ssh.Signer, error) {
 
 	// Parse key
 	var signer ssh.Signer
-	if len(key.passphrase) > 0 {
-		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(key.passphrase))
+	if len(key.Passphrase) > 0 {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(key.Passphrase))
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key with passphrase: %w", err)
+			return nil, fmt.Errorf("failed to parse private key with Passphrase: %w", err)
 		}
 	} else {
 		signer, err = ssh.ParsePrivateKey(keyBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key (key may be encrypted and require a passphrase): %w", err)
+			return nil, fmt.Errorf("failed to parse private key (key may be encrypted and require a Passphrase): %w", err)
 		}
 	}
 	return signer, nil
@@ -90,7 +90,7 @@ func LoadAuth(password string, identities []*Identity) ([]ssh.AuthMethod, error)
 		signer, err := LoadKey(id)
 		if err != nil {
 			// Log the error but continue with other authentication methods
-			log.Printf("Failed to load key from %s: %v", id.keyPath, err)
+			log.Printf("Failed to load key from %s: %v", id.KeyPath, err)
 			continue
 		}
 
@@ -143,7 +143,7 @@ func stdoutPrint(stdout io.Reader) {
 // TODO: not done yet, continue working on it
 // Test function, ignore this
 func Client() {
-	//key, _ := loadAuth("", []*Identity{{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
+	//key, _ := loadAuth("", []*Identity{{KeyPath: "$HOME/.ssh/id_rsa", Passphrase: "1234"}})
 	//config, _ := loadConfig("claw1", "")
 	//client, err := connect(config, key)
 	//if err != nil {
