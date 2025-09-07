@@ -1,7 +1,6 @@
 package sshc
 
 import (
-	"bufio"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -21,7 +20,7 @@ type Host struct {
 	Timeout      time.Duration
 }
 
-type identity struct {
+type Identity struct {
 	keyPath    string
 	passphrase string
 }
@@ -32,11 +31,11 @@ func (h *Host) String() string {
 		h.User, h.Host, h.Hostname, h.Port, h.IdentityFile, h.Timeout)
 }
 
-// loadKey loads a private key for SSH authentication
+// LoadKey loads a private key for SSH authentication
 // keyPath: path to the private key file
 // passphrase: optional passphrase for encrypted keys (can be nil or empty)
 // Returns ssh.Signer and error
-func loadKey(key *identity) (ssh.Signer, error) {
+func LoadKey(key *Identity) (ssh.Signer, error) {
 	if key.keyPath == "" {
 		// This probably won't work for www user
 		key.keyPath = "$HOME/.ssh/id_rsa"
@@ -70,11 +69,11 @@ func loadKey(key *identity) (ssh.Signer, error) {
 	return signer, nil
 }
 
-// loadAuth creates SSH authentication methods based on provided credentials
+// LoadAuth creates SSH authentication methods based on provided credentials
 // password: optional password for password authentication
-// identities: optional slice of identity structs for public key authentication
+// identities: optional slice of Identity structs for public key authentication
 // Returns a slice of ssh.AuthMethod that can be used for SSH authentication
-func loadAuth(password string, identities []*identity) ([]ssh.AuthMethod, error) {
+func LoadAuth(password string, identities []*Identity) ([]ssh.AuthMethod, error) {
 	var authMethods []ssh.AuthMethod
 
 	// Add password authentication if password is provided
@@ -82,13 +81,13 @@ func loadAuth(password string, identities []*identity) ([]ssh.AuthMethod, error)
 		authMethods = append(authMethods, ssh.Password(password))
 	}
 
-	// Add public key authentication for each identity
+	// Add public key authentication for each Identity
 	for _, id := range identities {
 		if id == nil {
 			continue
 		}
 
-		signer, err := loadKey(id)
+		signer, err := LoadKey(id)
 		if err != nil {
 			// Log the error but continue with other authentication methods
 			log.Printf("Failed to load key from %s: %v", id.keyPath, err)
@@ -106,11 +105,11 @@ func loadAuth(password string, identities []*identity) ([]ssh.AuthMethod, error)
 	return authMethods, nil
 }
 
-// connect creates SSH connection
+// Connect creates SSH connection
 // host: host information for connection
 // auth: credential for connection
 // Returns pointer to ssh connection
-func connect(host *Host, auth []ssh.AuthMethod) (*ssh.Client, error) {
+func Connect(host *Host, auth []ssh.AuthMethod) (*ssh.Client, error) {
 	sshConfig := &ssh.ClientConfig{
 		User:            host.User,
 		Auth:            auth,
@@ -142,33 +141,34 @@ func stdoutPrint(stdout io.Reader) {
 }
 
 // TODO: not done yet, continue working on it
+// Test function, ignore this
 func Client() {
-	key, _ := loadAuth("", []*identity{{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
-	config, _ := loadConfig("claw1", "")
-	client, err := connect(config, key)
-	if err != nil {
-		fmt.Println("Failed to connect to Claw1")
-		os.Exit(1)
-	}
-	defer client.Close()
-
-	session, err := client.NewSession()
-
-	stdin, stdout, err := setupTerminal(session, 10, 20)
-	session.Shell()
-
-	go stdoutPrint(stdout)
-	for {
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		if text == "wc" {
-			session.WindowChange(10, 50)
-		} else {
-			stdin.Write([]byte(text))
-		}
-	}
-
-	fmt.Println("session closed")
-	session.Close()
-	return
+	//key, _ := loadAuth("", []*Identity{{keyPath: "$HOME/.ssh/id_rsa", passphrase: "1234"}})
+	//config, _ := loadConfig("claw1", "")
+	//client, err := connect(config, key)
+	//if err != nil {
+	//	fmt.Println("Failed to connect to Claw1")
+	//	os.Exit(1)
+	//}
+	//defer client.Close()
+	//
+	//session, err := client.NewSession()
+	//
+	//stdin, stdout, err := setupTerminal(session, 10, 20)
+	//session.Shell()
+	//
+	//go stdoutPrint(stdout)
+	//for {
+	//	reader := bufio.NewReader(os.Stdin)
+	//	text, _ := reader.ReadString('\n')
+	//	if text == "wc" {
+	//		session.WindowChange(10, 50)
+	//	} else {
+	//		stdin.Write([]byte(text))
+	//	}
+	//}
+	//
+	//fmt.Println("session closed")
+	//session.Close()
+	//return
 }
