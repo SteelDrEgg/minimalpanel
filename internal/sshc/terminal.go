@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func setupTerminal(session *ssh.Session, height int, width int) (stdin io.WriteCloser, stdout io.Reader, err error) {
+func SetupTerminal(session *ssh.Session, height int, width int) (stdin io.WriteCloser, stdout io.Reader, err error) {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.ECHOCTL:       0,
