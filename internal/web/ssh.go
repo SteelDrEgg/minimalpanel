@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -386,26 +385,8 @@ func cleanupSession(clientId string) {
 	delete(sessionManager.sessions, clientId)
 }
 
-// StartSSHServer starts the SSH WebSocket server
-func StartSSHServer(addr string) error {
+// StartSSH starts the SSH service
+func StartSSH() {
 	server := CreateSSHServer()
-
 	http.Handle("/socket.io/", server.Handler())
-
-	// Serve static files
-	http.Handle("/", http.FileServer(http.Dir("web/")))
-
-	log.Printf("SSH WebSocket server starting on %s", addr)
-	return http.ListenAndServe(addr, nil)
-}
-
-// StartServer starts the main web server with SSH support
-func StartServer() {
-	log.Println("Starting minimalpanel web server...")
-
-	// Start SSH server on port 8080
-	err := StartSSHServer(":8080")
-	if err != nil {
-		log.Fatalf("Failed to start SSH server: %v", err)
-	}
 }
