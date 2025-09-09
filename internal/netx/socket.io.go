@@ -22,6 +22,7 @@ func (self *Socket) Initialize() {
 		engine.Polling,   // HTTP long-polling transport
 		engine.WebSocket, // WebSocket transport for real-time communication
 	))
+	opts.SetMaxHttpBufferSize(1e7) // 10MB
 	self.sock = socket.NewServer(nil, opts)
 	self.Namespaces = make(map[string]Namespace)
 }
