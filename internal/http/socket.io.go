@@ -33,6 +33,11 @@ func (self *Socket) AddNamespace(name string) {
 	self.Namespaces[name] = namespace
 }
 
+// GetNamespace returns the desired namespace
+func (self *Socket) GetNamespace(name string) Namespace {
+	return self.Namespaces[name]
+}
+
 // Handler returns an HTTP handler for the Socket.IO server
 func (self *Socket) Handler() http.Handler {
 	return self.sock.ServeHandler(nil)
