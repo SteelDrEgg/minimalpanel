@@ -11,11 +11,11 @@ import (
 	"time"
 )
 
-// loadConfig loads SSH configuration for a specific host from SSH config file
+// LoadConfig loads SSH configuration for a specific host from SSH config file
 // hostAlias: the SSH host alias to look up
 // configPath: optional path to SSH config file (empty string uses default ~/.ssh/config)
 // Returns a Host struct with all relevant configuration options
-func loadConfig(hostAlias string, configPath string) (*Host, error) {
+func LoadConfig(hostAlias string, configPath string) (*Host, error) {
 	if configPath == "" {
 		configPath = "$HOME/.ssh/config"
 	}
