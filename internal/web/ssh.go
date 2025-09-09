@@ -12,7 +12,7 @@ import (
 
 	"github.com/zishang520/socket.io/servers/socket/v3"
 	"golang.org/x/crypto/ssh"
-	socketio "minimalpanel/internal/http"
+	"minimalpanel/internal/netx"
 	"minimalpanel/internal/sshc"
 )
 
@@ -38,8 +38,8 @@ var sessionManager = &SSHSessionManager{
 }
 
 // CreateSSHServer sets up the SSH socket.io server
-func CreateSSHServer() *socketio.Socket {
-	server := new(socketio.Socket)
+func CreateSSHServer() *netx.Socket {
+	server := new(netx.Socket)
 	server.Initialize()
 	server.AddNamespace("/ssh")
 
