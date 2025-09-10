@@ -5,6 +5,7 @@ go 1.24.1
 toolchain go1.24.7
 
 require (
+	github.com/BurntSushi/toml v1.5.0
 	github.com/kevinburke/ssh_config v1.4.0
 	github.com/spf13/cast v1.9.2
 	github.com/zishang520/socket.io/servers/engine/v3 v3.0.0-rc.5
@@ -20,6 +21,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.54.0 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
