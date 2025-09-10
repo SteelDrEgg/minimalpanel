@@ -140,7 +140,6 @@ func stdoutPrint(stdout io.Reader) {
 	}
 }
 
-// TODO: not done yet, continue working on it
 // Test function, ignore this
 func Client() {
 	//key, _ := loadAuth("", []*Identity{{KeyPath: "$HOME/.ssh/id_rsa", Passphrase: "1234"}})
