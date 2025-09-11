@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinimalPanel - Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dashboard-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+        .dashboard-header h1 {
+            color: #333;
+            margin: 0 0 1rem 0;
+            font-size: 2.2rem;
+            font-weight: 600;
+        }
+        .welcome-message {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+        }
+        .user-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .user-info .user-details {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .user-info strong {
+            color: #333;
+        }
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+        .logout-btn:hover {
+            transform: translateY(-1px);
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+        .feature-card h3 {
+            color: #333;
+            margin: 0 0 1rem 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .feature-card p {
+            color: #666;
+            margin: 0 0 1rem 0;
+            line-height: 1.5;
+        }
+        .feature-card .status {
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.coming-soon {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s ease;
+            display: inline-block;
+        }
+        .nav-button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .nav-button.secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+        .nav-button:hover {
+            transform: translateY(-2px);
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-item .number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-item .label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1.5rem;
+            }
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>🚀 MinimalPanel Dashboard</h1>
+        </div>
+        
+        <div class="welcome-message">
+            Welcome to your control panel!
+        </div>
+        
+        <div class="user-info">
+            <div class="user-details">
+                <strong>👤 Logged in as:</strong> <span id="username">Loading...</span>
+            </div>
+            <a href="/logout-page" class="logout-btn">Logout</a>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="number" id="sessionTime">--</div>
+                <div class="label">Session Time</div>
+            </div>
+            <div class="stat-item">
+                <div class="number">✅</div>
+                <div class="label">Auth Status</div>
+            </div>
+            <div class="stat-item">
+                <div class="number">🔒</div>
+                <div class="label">Secure</div>
+            </div>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>🖥️ Terminal Access</h3>
+                <p>Secure SSH terminal access to your servers with web-based interface.</p>
+                <span class="status active">Active</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔐 Authentication</h3>
+                <p>Robust session management with both cookie and token-based auth.</p>
+                <span class="status active">Active</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>⚙️ Configuration</h3>
+                <p>Thread-safe configuration management with real-time updates.</p>
+                <span class="status active">Active</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📊 Monitoring</h3>
+                <p>System monitoring and performance metrics dashboard.</p>
+                <span class="status coming-soon">Coming Soon</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📁 File Manager</h3>
+                <p>Web-based file management with upload and download capabilities.</p>
+                <span class="status coming-soon">Coming Soon</span>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔧 Settings</h3>
+                <p>User preferences and system configuration management.</p>
+                <span class="status coming-soon">Coming Soon</span>
+            </div>
+        </div>
+        
+        <div class="nav-buttons">
+            <a href="/terminal" class="nav-button primary">🖥️ Open Terminal</a>
+            <a href="/check-auth" class="nav-button secondary">🔍 Check Status</a>
+        </div>
+    </div>
+
+    <script>
+        // Load user information
+        async function loadUserInfo() {
+            try {
+                const response = await fetch('/check-auth');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('username').textContent = data.username;
+                } else {
+                    // Not authenticated, redirect to login
+                    window.location.href = '/pages/login.html';
+                }
+            } catch (error) {
+                console.error('Failed to check auth:', error);
+                window.location.href = '/pages/login.html';
+            }
+        }
+        
+        // Update session time
+        let sessionStart = Date.now();
+        function updateSessionTime() {
+            const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('sessionTime').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Initialize page
+        window.addEventListener('load', function() {
+            loadUserInfo();
+            setInterval(updateSessionTime, 1000);
+        });
+        
+        // Handle auth check button
+        document.querySelector('a[href="/check-auth"]').addEventListener('click', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetch('/check-auth');
+                const data = await response.json();
+                alert(data.success ? 
+                    `✅ Authenticated as: ${data.username}` : 
+                    '❌ Not authenticated'
+                );
+            } catch (error) {
+                alert('❌ Failed to check authentication status');
+            }
+        });
+    </script>
+</body>
+</html>

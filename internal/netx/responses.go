@@ -18,6 +18,7 @@ type AuthResponse struct {
 	Success  bool   `json:"success"`
 	Message  string `json:"message"`
 	Username string `json:"username,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
 // ErrorResponse represents error responses
@@ -59,10 +60,16 @@ func WriteError(w http.ResponseWriter, statusCode int, message string, err error
 
 // WriteAuthSuccess writes a successful authentication response
 func WriteAuthSuccess(w http.ResponseWriter, message string, username string) error {
+	return WriteAuthSuccessWithToken(w, message, username, "")
+}
+
+// WriteAuthSuccessWithToken writes a successful authentication response with token
+func WriteAuthSuccessWithToken(w http.ResponseWriter, message string, username string, token string) error {
 	return WriteJSON(w, http.StatusOK, AuthResponse{
 		Success:  true,
 		Message:  message,
 		Username: username,
+		Token:    token,
 	})
 }
 

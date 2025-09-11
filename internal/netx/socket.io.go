@@ -99,7 +99,7 @@ func Start(addr string) error {
 
 	fmt.Println("Socket.IO服务器启动在: http://localhost:8080")
 	fmt.Println("访问测试页面: http://DrEggs-Mac-Pro-3.local:8080")
-	StartFrontend()
+	//StartFrontend()
 
 	return http.ListenAndServe(":8080", nil)
 }
