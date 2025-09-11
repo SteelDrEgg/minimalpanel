@@ -60,24 +60,7 @@ func CreateSSHServer() *netx.Socket {
 	sshNamespace.RegisterEvents()
 
 	// Auth
-	sshNamespace.AddMiddleware(func(client *socket.Socket, next func(*socket.ExtendedError)) {
-		cookies := client.Handshake().Headers["Cookie"].([]string)[0]
-		cookie := func() string {
-			parts := strings.Split(cookies, ";")
-			for _, p := range parts {
-				p = strings.TrimSpace(p)
-				if strings.HasPrefix(p, auth.CookieName+"=") {
-					return strings.TrimPrefix(p, auth.CookieName+"=")
-				}
-			}
-			return ""
-		}()
-		if _, ok := auth.ValidateSession(cookie); ok {
-			next(nil)
-		} else {
-			next(socket.NewExtendedError("Unauthorized", ""))
-		}
-	})
+	sshNamespace.AddMiddleware(auth.RequireAuthSocketIO)
 
 	return server
 }
