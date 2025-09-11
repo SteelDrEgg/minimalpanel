@@ -8,9 +8,15 @@ import (
 )
 
 var (
-	Path string // Config path
-	Conf Config
+	Path string       // Config path
 	mu   sync.RWMutex // Protects access to Conf
+	Conf = Config{    // Default values
+		SSHConfigPath: "~/.ssh",
+		Auth:          Auth{},
+		Web: Web{
+			RootPath: "web",
+		},
+	}
 )
 
 // LoadConfig Set Path and load config into memory
@@ -104,4 +110,11 @@ func GetUsers() map[string]string {
 		users[k] = v
 	}
 	return users
+}
+
+// GetWeb returns the Web config in a thread-safe manner
+func GetWeb() Web {
+	mu.RLock()
+	defer mu.RUnlock()
+	return Conf.Web
 }
