@@ -14,7 +14,7 @@ func NewUser(name string, password string) error {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	newConf := conf.Conf
+	newConf := conf.Read()
 
 	if newConf.Auth.Users == nil {
 		newConf.Auth.Users = make(map[string]string)
@@ -25,14 +25,14 @@ func NewUser(name string, password string) error {
 	if err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
-	conf.Conf = newConf
 
 	return nil
 }
 
 // VerifyPassword verifies a user's password against the stored hash
 func VerifyPassword(name string, password string) bool {
-	hashedPassword, exists := conf.Conf.Auth.Users[name]
+	users := conf.GetUsers()
+	hashedPassword, exists := users[name]
 	if !exists {
 		return false
 	}
