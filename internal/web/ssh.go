@@ -58,6 +58,12 @@ func CreateSSHServer() *netx.Socket {
 
 	sshNamespace.RegisterEvents()
 
+	// Auth here
+	sshNamespace.AddMiddleware(func(client *socket.Socket, next func(*socket.ExtendedError)) {
+		// TODO: Read cookies
+		next(nil)
+	})
+
 	return server
 }
 
