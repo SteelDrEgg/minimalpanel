@@ -20,7 +20,20 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 // RequireAuthSocketIO is a middleware that checks authentication for protected Socket.IO endpoints
 func RequireAuthSocketIO(client *socket.Socket, next func(*socket.ExtendedError)) {
-	cookies := client.Handshake().Headers["Cookie"].([]string)[0]
+	// Safely get cookies from headers
+	cookieHeader := client.Handshake().Headers["Cookie"]
+	if cookieHeader == nil {
+		next(socket.NewExtendedError("Unauthorized", "No cookies provided"))
+		return
+	}
+
+	cookieSlice, ok := cookieHeader.([]string)
+	if !ok || len(cookieSlice) == 0 {
+		next(socket.NewExtendedError("Unauthorized", "Invalid cookie format"))
+		return
+	}
+
+	cookies := cookieSlice[0]
 	cookie := func() string {
 		parts := strings.Split(cookies, ";")
 		for _, p := range parts {
@@ -31,9 +44,10 @@ func RequireAuthSocketIO(client *socket.Socket, next func(*socket.ExtendedError)
 		}
 		return ""
 	}()
+
 	if _, ok := ValidateSession(cookie); ok {
 		next(nil)
 	} else {
-		next(socket.NewExtendedError("Unauthorized", ""))
+		next(socket.NewExtendedError("Unauthorized", "Invalid session"))
 	}
 }
