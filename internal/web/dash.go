@@ -5,7 +5,6 @@ import (
 	"minimalpanel/internal/auth"
 	"minimalpanel/internal/netx"
 	"minimalpanel/internal/system"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,12 +67,9 @@ type DiskMetric struct {
 	UsedPercent float64 `json:"used_percent"`
 }
 
-// CreateDashboardServer sets up the dashboard socket.io server
-func CreateDashboardServer() *netx.Socket {
-	server := new(netx.Socket)
-	server.Initialize()
-	server.AddNamespace("/dashboard")
-
+// SetupDashboardService sets up the dashboard socket.io namespace on the global server
+func SetupDashboardService() {
+	server := netx.GetGlobalServer()
 	dashNamespace := server.GetNamespace("/dashboard")
 
 	// Handle dashboard connection requests
@@ -91,9 +87,7 @@ func CreateDashboardServer() *netx.Socket {
 	dashNamespace.RegisterEvents()
 
 	// Auth - commented out for development/testing
-	// dashNamespace.AddMiddleware(auth.RequireAuthSocketIO)
-
-	return server
+	dashNamespace.AddMiddleware(auth.RequireAuthSocketIO)
 }
 
 // handleDashboardConnect handles dashboard connection requests
@@ -398,10 +392,9 @@ func cleanupDashboardSession(clientId string) {
 	fmt.Printf("Dashboard client disconnected: %s\n", clientId)
 }
 
-// StartDashboard starts the dashboard service
+// StartDashboard starts the dashboard service (deprecated - use SetupDashboardService instead)
 func StartDashboard() {
-	server := CreateDashboardServer()
-	http.Handle("/socket.io/", server.Handler())
+	SetupDashboardService()
 }
 
 // GetActiveSessionsCount returns the number of active dashboard sessions
