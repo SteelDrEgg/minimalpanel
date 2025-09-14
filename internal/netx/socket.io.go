@@ -6,6 +6,7 @@ import (
 	"github.com/zishang520/socket.io/servers/socket/v3"
 	"github.com/zishang520/socket.io/v3/pkg/types"
 	"net/http"
+	"sync"
 )
 
 // Socket represents a wrapper around the Socket.IO server
@@ -76,6 +77,40 @@ func (self *Namespace) RegisterEvents() {
 // AddMiddleware adds a middleware to the namespace
 func (self *Namespace) AddMiddleware(f func(client *socket.Socket, next func(*socket.ExtendedError))) {
 	self.namespace.Use(f)
+}
+
+// GlobalServer holds the singleton Socket.IO server instance
+var (
+	globalServer *Socket
+	once         sync.Once
+)
+
+// GetGlobalServer returns the singleton Socket.IO server instance
+func GetGlobalServer() *Socket {
+	once.Do(func() {
+		globalServer = new(Socket)
+		globalServer.Initialize()
+	})
+	return globalServer
+}
+
+// SetupGlobalServer initializes the global Socket.IO server with all required namespaces
+// This should be called once during application startup
+func SetupGlobalServer() *Socket {
+	server := GetGlobalServer()
+
+	// Add SSH namespace
+	server.AddNamespace("/ssh")
+
+	// Add Dashboard namespace
+	server.AddNamespace("/dashboard")
+
+	return server
+}
+
+// GetHandler returns the HTTP handler for the global Socket.IO server
+func GetHandler() http.Handler {
+	return GetGlobalServer().Handler()
 }
 
 // Test function, ignore this

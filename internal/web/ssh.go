@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"minimalpanel/internal/auth"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -37,12 +36,9 @@ var sessionManager = &SSHSessionManager{
 	sessions: make(map[string]*SSHSession),
 }
 
-// CreateSSHServer sets up the SSH socket.io server
-func CreateSSHServer() *netx.Socket {
-	server := new(netx.Socket)
-	server.Initialize()
-	server.AddNamespace("/ssh")
-
+// SetupSSHService sets up the SSH socket.io namespace on the global server
+func SetupSSHService() {
+	server := netx.GetGlobalServer()
 	sshNamespace := server.GetNamespace("/ssh")
 
 	// Handle SSH connection requests
@@ -61,8 +57,6 @@ func CreateSSHServer() *netx.Socket {
 
 	// Auth
 	sshNamespace.AddMiddleware(auth.RequireAuthSocketIO)
-
-	return server
 }
 
 // handleSSHConnect handles SSH connection requests
@@ -389,8 +383,7 @@ func cleanupSession(clientId string) {
 	delete(sessionManager.sessions, clientId)
 }
 
-// StartSSH starts the SSH service
+// StartSSH starts the SSH service (deprecated - use SetupSSHService instead)
 func StartSSH() {
-	server := CreateSSHServer()
-	http.Handle("/socket.io/", server.Handler())
+	SetupSSHService()
 }
