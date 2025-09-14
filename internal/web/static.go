@@ -18,3 +18,16 @@ func StartPages(mux *http.ServeMux) {
 		),
 	)
 }
+
+func StartAssets(mux *http.ServeMux) {
+	mux.Handle(
+		"/assets/", http.StripPrefix(
+			"/assets",
+			http.FileServer(
+				http.Dir(
+					filepath.Join(conf.GetWeb().RootPath, "assets"),
+				),
+			),
+		),
+	)
+}
