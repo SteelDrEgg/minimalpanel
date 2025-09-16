@@ -2,213 +2,219 @@
 <html lang="en">
 
 <head>
-    <title>SSH Terminal</title>
+    <title>Terminal</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
     <style>
+        :root {
+            --border-color: #e5e5e5;
+            --text-secondary: #737373;
+            --text-primary: #0a0a0a;
+            --background-white: white;
+            --background-light: #f8fafc;
+            --background-page: white;
+            --green-primary: #87ce15;
+            --red-primary: #ef4444;
+            --shadow-light: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        html, body {
-            height: 100%;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e1e1e;
-            color: #ffffff;
-            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background-page);
+            color: var(--text-primary);
+            height: 100vh;
             overflow: hidden;
         }
 
-        .container {
-            height: 100%;
-        }
-
-        .main-content {
-            height: 100%;
-        }
-
-        .toolbar {
-            background: #2d2d30;
-            padding: 10px 20px;
-            border-bottom: 1px solid #3e3e42;
+        /* Top Bar */
+        .top-bar {
+            background: var(--background-white);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 60px;
         }
 
+        .status-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .status-indicator.connected {
+            background: var(--green-primary);
+        }
+
+        .status-indicator.error {
+            background: var(--red-primary);
+        }
+
+        .connect-button {
+            background: var(--background-white);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-light);
+        }
+
+        .connect-button:hover {
+            background: var(--background-light);
+        }
+
+        .connect-button.connected {
+            background: var(--red-primary);
+            color: white;
+            border-color: var(--red-primary);
+        }
+
+        .connect-button.connected:hover {
+            background: #dc2626;
+        }
+
+        /* Terminal Container */
         .terminal-container {
-            background: #1e1e1e;
-            padding: 10px;
-            width: 100%;
-            /* Height will be set by JavaScript */
+            height: calc(100vh - 60px);
+            background: white;
+            padding: 1rem;
         }
 
         #terminal {
             width: 100%;
             height: 100%;
+            background: white;
         }
 
-        .connection-form {
-            background: #2d2d30;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--background-white);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 1rem;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            color: #cccccc;
-            font-size: 14px;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
         }
 
-        .form-group input,
-        .form-group select {
+        .form-group input {
             width: 100%;
-            padding: 8px 12px;
-            background: #3c3c3c;
-            border: 1px solid #464647;
-            border-radius: 4px;
-            color: #ffffff;
-            font-size: 14px;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            background: var(--background-white);
+            color: var(--text-primary);
         }
 
-        .form-group input:focus,
-        .form-group select:focus {
+        .form-group input:focus {
             outline: none;
-            border-color: #007acc;
-        }
-
-        .btn {
-            background: #007acc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
-        .btn:hover {
-            background: #005a9e;
-        }
-
-        .btn:disabled {
-            background: #666666;
-            cursor: not-allowed;
-        }
-
-        .btn-disconnect {
-            background: #d73a49;
-        }
-
-        .btn-disconnect:hover {
-            background: #b52d3a;
-        }
-
-        .status {
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        .status.connected {
-            background: #28a745;
-            color: white;
-        }
-
-        .status.disconnected {
-            background: #6c757d;
-            color: white;
-        }
-
-        .status.error {
-            background: #dc3545;
-            color: white;
-        }
-
-        .status.connecting {
-            background: #ffc107;
-            color: #212529;
-        }
-
-        .toggle-section {
-            cursor: pointer;
-            user-select: none;
-            padding: 10px 0;
-            border-bottom: 1px solid #3e3e42;
-            margin-bottom: 15px;
-        }
-
-        .toggle-section:hover {
-            background: #3e3e42;
-        }
-
-        .collapsible {
-            display: none;
-        }
-
-        .collapsible.active {
-            display: block;
-        }
-
-        .session-info {
-            background: #2d2d30;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .session-info h3 {
-            margin-bottom: 10px;
-            color: #cccccc;
-        }
-
-        .session-info p {
-            margin: 5px 0;
-            color: #999999;
-            font-size: 13px;
+            border-color: var(--green-primary);
         }
 
         .auth-tabs {
             display: flex;
-            margin-bottom: 15px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            overflow: hidden;
         }
 
         .auth-tab {
             flex: 1;
-            padding: 8px 12px;
-            background: #3c3c3c;
-            border: 1px solid #464647;
+            padding: 0.5rem;
+            background: var(--background-light);
             cursor: pointer;
             text-align: center;
-            font-size: 13px;
-            color: #cccccc;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            border: none;
+            transition: all 0.2s;
         }
 
         .auth-tab.active {
-            background: #007acc;
+            background: var(--green-primary);
             color: white;
-        }
-
-        .auth-tab:first-child {
-            border-radius: 4px 0 0 4px;
-        }
-
-        .auth-tab:last-child {
-            border-radius: 0 4px 4px 0;
         }
 
         .auth-content {
@@ -219,126 +225,42 @@
             display: block;
         }
 
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
+        .modal-button {
             width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: #252526;
-            border-radius: 12px;
-            padding: 30px;
-            width: 90%;
-            max-width: 450px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: modalSlideIn 0.3s ease-out;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #3e3e42;
-        }
-
-        .modal-header h2 {
-            margin: 0;
-            color: #ffffff;
-            font-size: 1.5rem;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: #cccccc;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-            background: #3e3e42;
-            color: #ffffff;
-        }
-
-        .btn-connect {
-            background: #007acc;
+            padding: 0.75rem;
+            background: var(--green-primary);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
             cursor: pointer;
-            font-size: 14px;
-            margin-left: 10px;
-            transition: background 0.2s ease;
+            margin-top: 1rem;
         }
 
-        .btn-connect:hover {
-            background: #005a9e;
+        .modal-button:hover {
+            background: #6fa00d;
         }
 
-        .btn-connect:disabled {
-            background: #666666;
+        .modal-button:disabled {
+            background: var(--text-secondary);
             cursor: not-allowed;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="main-content">
-            <div class="toolbar">
-                <div>
-                    <span style="font-weight: bold;">SSH Terminal</span>
-                    <span id="terminalTitle" style="margin-left: 10px; color: #999;">Not connected</span>
-                    <div id="status" class="status disconnected" style="display: inline-block; margin-left: 15px; padding: 4px 8px; font-size: 12px;">Disconnected</div>
-                </div>
-                <div>
-                    <button id="connectBtn" class="btn-connect" onclick="openConnectionModal()">Connect</button>
-                    <button id="disconnectBtn" class="btn-connect btn-disconnect" onclick="disconnect()" style="display: none;">Disconnect</button>
-                </div>
-            </div>
-            
-            <div class="terminal-container">
-                <div id="terminal"></div>
-            </div>
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div class="status-info">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Not connected</span>
         </div>
+        <button id="connectBtn" class="connect-button" onclick="openConnectionModal()">Connect</button>
+    </div>
+
+    <!-- Terminal Container -->
+    <div class="terminal-container">
+        <div id="terminal"></div>
     </div>
 
     <!-- Connection Modal -->
@@ -349,90 +271,79 @@
                 <button class="modal-close" onclick="closeConnectionModal()">&times;</button>
             </div>
             
-            <div class="connection-form">
-                <div class="form-group">
-                    <label for="host">Host</label>
-                    <input type="text" id="host" placeholder="e.g., example.com" value="localhost">
-                </div>
-
-                <div class="form-group">
-                    <label for="port">Port</label>
-                    <input type="number" id="port" placeholder="22" value="22">
-                </div>
-
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Enter username">
-                </div>
-
-                <div class="auth-tabs">
-                    <div class="auth-tab active" onclick="switchAuthTab('password')">Password</div>
-                    <div class="auth-tab" onclick="switchAuthTab('key')">Private Key</div>
-                </div>
-
-                <div id="password-auth" class="auth-content active">
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" placeholder="Enter password">
-                    </div>
-                </div>
-
-                <div id="key-auth" class="auth-content">
-                    <div class="form-group">
-                        <label for="privateKey">Private Key Path</label>
-                        <input type="text" id="privateKey" placeholder="e.g., ~/.ssh/id_rsa">
-                    </div>
-                    <div class="form-group">
-                        <label for="passphrase">Passphrase (optional)</label>
-                        <input type="password" id="passphrase" placeholder="Enter passphrase if required">
-                    </div>
-                </div>
-
-                <button class="btn" style="width: 100%; margin-top: 20px;" onclick="connectFromModal()">Connect</button>
+            <div class="form-group">
+                <label for="host">Host</label>
+                <input type="text" id="host" placeholder="e.g., example.com" value="localhost">
             </div>
 
-            <div class="session-info" id="sessionInfo" style="display: none; margin-top: 20px;">
-                <h3>Session Info</h3>
-                <p id="sessionHost">Host: -</p>
-                <p id="sessionUser">User: -</p>
-                <p id="sessionPort">Port: -</p>
-                <p id="sessionTime">Connected: -</p>
+            <div class="form-group">
+                <label for="port">Port</label>
+                <input type="number" id="port" placeholder="22" value="22">
             </div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter username">
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthTab('password')">Password</button>
+                <button class="auth-tab" onclick="switchAuthTab('key')">Private Key</button>
+            </div>
+
+            <div id="password-auth" class="auth-content active">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter password">
+                </div>
+            </div>
+
+            <div id="key-auth" class="auth-content">
+                <div class="form-group">
+                    <label for="privateKey">Private Key Path</label>
+                    <input type="text" id="privateKey" placeholder="e.g., ~/.ssh/id_rsa">
+                </div>
+                <div class="form-group">
+                    <label for="passphrase">Passphrase (optional)</label>
+                    <input type="password" id="passphrase" placeholder="Enter passphrase if required">
+                </div>
+            </div>
+
+            <button class="modal-button" onclick="connectFromModal()">Connect</button>
         </div>
     </div>
 
-    <!-- Socket.IO and Xterm.js -->
+    <!-- Scripts -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
 
     <script>
-        // Terminal setup
+        // Terminal setup with white theme
         const term = new Terminal({
             cursorBlink: true,
             theme: {
-                background: '#1e1e1e',
-                foreground: '#ffffff',
-                cursor: '#ffffff',
-                selection: '#444444',
+                background: '#ffffff',
+                foreground: '#000000',
+                cursor: '#000000',
+                selection: '#add2ff',
                 black: '#000000',
-                red: '#ff0000',
-                green: '#00ff00',
-                yellow: '#ffff00',
-                blue: '#0000ff',
-                magenta: '#ff00ff',
-                cyan: '#00ffff',
-                white: '#ffffff',
-                brightBlack: '#555555',
-                brightRed: '#ff5555',
-                brightGreen: '#55ff55',
-                brightYellow: '#ffff55',
-                brightBlue: '#5555ff',
-                brightMagenta: '#ff55ff',
-                brightCyan: '#55ffff',
+                red: '#cd0000',
+                green: '#00cd00',
+                yellow: '#cdcd00',
+                blue: '#0000ee',
+                magenta: '#cd00cd',
+                cyan: '#00cdcd',
+                white: '#e5e5e5',
+                brightBlack: '#7f7f7f',
+                brightRed: '#ff0000',
+                brightGreen: '#00ff00',
+                brightYellow: '#ffff00',
+                brightBlue: '#5c5cff',
+                brightMagenta: '#ff00ff',
+                brightCyan: '#00ffff',
                 brightWhite: '#ffffff'
             },
-            allowTransparency: true,
             fontSize: 14,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace'
         });
@@ -443,45 +354,33 @@
 
         term.open(document.getElementById('terminal'));
         
-        // Initial terminal size
-        console.log('Initial terminal size:', term.cols, 'x', term.rows);
-        
-        term.write('SSH Terminal - Click Connect to start a session.\r\n');
+        term.write('Terminal - Click Connect to start an SSH session.\r\n');
 
-        // Socket.IO setup
+        // Socket.IO and connection state
         let socket = null;
         let connected = false;
-        let connectionStartTime = null;
 
-        // Form elements
-        const hostInput = document.getElementById('host');
-        const portInput = document.getElementById('port');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const privateKeyInput = document.getElementById('privateKey');
-        const passphraseInput = document.getElementById('passphrase');
+        // UI elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
         const connectBtn = document.getElementById('connectBtn');
-        const disconnectBtn = document.getElementById('disconnectBtn');
-        const statusDiv = document.getElementById('status');
-        const sessionInfo = document.getElementById('sessionInfo');
+        const modal = document.getElementById('connectionModal');
 
         // Modal functions
         function openConnectionModal() {
-            document.getElementById('connectionModal').classList.add('active');
+            if (connected) {
+                disconnect();
+            } else {
+                modal.classList.add('active');
+            }
         }
 
         function closeConnectionModal() {
-            document.getElementById('connectionModal').classList.remove('active');
+            modal.classList.remove('active');
         }
 
-        function connectFromModal() {
-            connect();
-            // Don't close modal immediately - wait for connection result
-        }
-
-        // Authentication tab switching
         function switchAuthTab(authType) {
-            // Update tab buttons
+            // Update tabs
             document.querySelectorAll('.auth-tab').forEach(tab => tab.classList.remove('active'));
             event.target.classList.add('active');
 
@@ -490,78 +389,44 @@
             document.getElementById(authType + '-auth').classList.add('active');
         }
 
-        // Close modal when clicking outside
-        window.addEventListener('click', (event) => {
-            const modal = document.getElementById('connectionModal');
-            if (event.target === modal) {
-                closeConnectionModal();
-            }
-        });
+        function connectFromModal() {
+            connect();
+        }
 
-        // Close modal on Escape key
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                closeConnectionModal();
-            }
-        });
-
-        // Update status display
+        // Update status
         function updateStatus(status, message) {
-            statusDiv.className = `status ${status}`;
-            statusDiv.textContent = message;
-        }
-
-        // Update session info
-        function updateSessionInfo(info) {
-            if (info) {
-                document.getElementById('sessionHost').textContent = `Host: ${info.host}`;
-                document.getElementById('sessionUser').textContent = `User: ${info.user}`;
-                document.getElementById('sessionPort').textContent = `Port: ${info.port}`;
-                document.getElementById('sessionTime').textContent = `Connected: ${new Date().toLocaleTimeString()}`;
-                document.getElementById('terminalTitle').textContent = `${info.user}@${info.host}:${info.port}`;
-                sessionInfo.style.display = 'block';
+            statusIndicator.className = `status-indicator ${status}`;
+            statusText.textContent = message;
+            
+            if (status === 'connected') {
+                connectBtn.textContent = 'Disconnect';
+                connectBtn.classList.add('connected');
             } else {
-                sessionInfo.style.display = 'none';
-                document.getElementById('terminalTitle').textContent = 'Not connected';
+                connectBtn.textContent = 'Connect';
+                connectBtn.classList.remove('connected');
             }
         }
 
-
-        // Terminal resize handling
-        let resizeTimeout = null;
-        const CHAR_WIDTH = 8.4;   // Character width in pixels
-        const CHAR_HEIGHT = 17;   // Character height in pixels
-        const PADDING = 20;       // Container padding
-        
+        // Terminal resize
         function resizeTerminal() {
-            // Calculate available space
-            const width = window.innerWidth - PADDING;
-            const height = window.innerHeight - document.querySelector('.toolbar').offsetHeight - PADDING;
+            const container = document.querySelector('.terminal-container');
+            const width = container.clientWidth - 32; // padding
+            const height = container.clientHeight - 32;
             
-            // Convert to terminal size
-            const cols = Math.floor(width / CHAR_WIDTH);
-            const rows = Math.floor(height / CHAR_HEIGHT);
+            const cols = Math.floor(width / 9.6); // character width
+            const rows = Math.floor(height / 17); // character height
             
-            console.log(`Resize: ${width}x${height}px → ${cols}x${rows} chars`);
-            
-            if (cols > 0 && rows > 0) {
-                // Send to backend
-                if (connected && socket) {
-                    socket.emit('resize', { cols, rows });
-                }
-                
-                // Resize terminal
+            if (cols > 0 && rows > 0 && connected && socket) {
+                socket.emit('resize', { cols, rows });
                 term.resize(cols, rows);
             }
         }
 
-        // Debounced resize - wait for resize to finish
         window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(resizeTerminal, 300);
+            setTimeout(resizeTerminal, 100);
         });
 
-        // Terminal input handler
+        // Terminal input
         term.onData(data => {
             if (connected && socket) {
                 socket.emit('terminal_input', data);
@@ -572,76 +437,54 @@
         function connect() {
             if (connected) return;
 
-            const host = hostInput.value.trim();
-            const port = portInput.value.trim() || '22';
-            const username = usernameInput.value.trim();
+            const host = document.getElementById('host').value.trim();
+            const port = document.getElementById('port').value.trim() || '22';
+            const username = document.getElementById('username').value.trim();
 
             if (!host || !username) {
                 updateStatus('error', 'Host and username are required');
                 return;
             }
 
-            updateStatus('connecting', 'Connecting...');
-            connectBtn.disabled = true;
-
-            // Initialize socket connection
+            updateStatus('', 'Connecting...');
+            
+            // Initialize socket
             socket = io('/ssh', {
                 transports: ['websocket', 'polling']
             });
 
             socket.on('connect', () => {
-                console.log('Socket connected');
-                
-                // Prepare connection data
                 const connectionData = {
                     host: host,
                     port: port,
                     username: username
                 };
 
-                // Add authentication data based on selected tab
+                // Add auth data
                 if (document.getElementById('password-auth').classList.contains('active')) {
-                    connectionData.password = passwordInput.value;
-                    console.log('Using password authentication');
+                    connectionData.password = document.getElementById('password').value;
                 } else {
-                    connectionData.privateKey = privateKeyInput.value.trim();
-                    connectionData.passphrase = passphraseInput.value;
-                    console.log('Using private key authentication, key path:', connectionData.privateKey, 'has passphrase:', !!connectionData.passphrase);
+                    connectionData.privateKey = document.getElementById('privateKey').value.trim();
+                    connectionData.passphrase = document.getElementById('passphrase').value;
                 }
 
-                console.log('Sending connection data:', connectionData);
-                
-                // Send connection request
                 socket.emit('connect_ssh', connectionData);
             });
 
             socket.on('ssh_connected', (data) => {
                 connected = true;
-                connectionStartTime = new Date();
-                updateStatus('connected', 'Connected');
-                updateSessionInfo(data);
-                
-                connectBtn.style.display = 'none';
-                disconnectBtn.style.display = 'block';
-                
-                // Close the connection modal on success
+                updateStatus('connected', `Connected to ${data.user}@${data.host}:${data.port}`);
                 closeConnectionModal();
                 
                 term.clear();
-                term.write('Connected to ' + data.user + '@' + data.host + ':' + data.port + '\r\n');
+                term.write(`Connected to ${data.user}@${data.host}:${data.port}\r\n`);
                 term.focus();
                 
-                // Size terminal on connect
-                setTimeout(() => {
-                    resizeTerminal();
-                }, 200);
+                setTimeout(resizeTerminal, 200);
             });
 
             socket.on('ssh_error', (error) => {
-                console.error('SSH Error:', error);
-                updateStatus('error', 'Error: ' + error);
-                connectBtn.disabled = false;
-                
+                updateStatus('error', `Error: ${error}`);
                 if (socket) {
                     socket.disconnect();
                     socket = null;
@@ -653,21 +496,13 @@
             });
 
             socket.on('disconnect', () => {
-                console.log('Socket disconnected');
                 if (connected) {
                     disconnect();
                 }
             });
 
             socket.on('connect_error', (error) => {
-                console.error('Socket connection error:', error);
-                updateStatus('error', 'Socket connection failed: ' + error.message);
-                connectBtn.disabled = false;
-            });
-
-            socket.on('error', (error) => {
-                console.error('Socket error:', error);
-                updateStatus('error', 'Socket error: ' + error);
+                updateStatus('error', `Connection failed: ${error.message}`);
             });
         }
 
@@ -679,20 +514,20 @@
             }
 
             connected = false;
-            connectionStartTime = null;
-            
-            updateStatus('disconnected', 'Disconnected');
-            updateSessionInfo(null);
-            
-            connectBtn.style.display = 'block';
-            connectBtn.disabled = false;
-            disconnectBtn.style.display = 'none';
+            updateStatus('', 'Not connected');
             
             term.clear();
-            term.write('SSH Terminal - Click Connect to start a session.\r\n');
+            term.write('Terminal - Click Connect to start an SSH session.\r\n');
         }
 
-        // Handle Enter key in form inputs
+        // Close modal when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeConnectionModal();
+            }
+        });
+
+        // Handle Enter key in inputs
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !connected) {
@@ -701,15 +536,15 @@
             });
         });
 
-        // Initial terminal focus
-        term.focus();
-
-        // Handle page unload
+        // Cleanup
         window.addEventListener('beforeunload', () => {
             if (connected && socket) {
                 socket.disconnect();
             }
         });
+
+        // Initial terminal focus
+        term.focus();
     </script>
 </body>
 
