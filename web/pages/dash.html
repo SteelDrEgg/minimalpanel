@@ -46,6 +46,14 @@
             gap: 1rem;
         }
 
+        .heartbeat-ip-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 300;
+        }
+
         .heartbeat {
             position: relative;
             width: 12px;
@@ -368,11 +376,13 @@
     <!-- Top Bar -->
     <div class="top-bar">
         <div class="status-info">
-            <div class="heartbeat" id="heartbeat"></div>
-            <div class="system-info">
+            <div class="heartbeat-ip-group">
+                <div class="heartbeat" id="heartbeat"></div>
                 <span id="current-ip">192.168.1.100</span>
-                <span>Hostname: <span id="hostname">server-01</span></span>
             </div>
+            <!-- <div class="system-info">
+                <span>Hostname: <span id="hostname">server-01</span></span>
+            </div> -->
         </div>
         
         <div class="refresh-controls">
