@@ -35,7 +35,7 @@ func runServer(logger *slog.Logger) error {
 		ReservedHTTP: []string{
 			"/socket.io/",
 			"/api/login", "/api/logout", "/api/check-auth",
-			"/api/services", "/api/services/start",
+			"/api/services/discovered", "/api/services/running", "/api/services/start",
 			"/api/services/stop", "/api/services/restart", "/api/services/config",
 			"/api/kernel/version", "/api/kernel/reload",
 		},
