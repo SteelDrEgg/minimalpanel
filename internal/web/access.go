@@ -23,7 +23,7 @@ type accessRuleView struct {
 
 func startAccessConfig(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/access", management(conf.APICapabilityAccess, handleAccess))
-	mux.HandleFunc("PATCH /api/access", management(conf.APICapabilityAccess, handlePatchAccess))
+	mux.HandleFunc("PUT /api/access", management(conf.APICapabilityAccess, handlePutAccess))
 	mux.HandleFunc("DELETE /api/access", management(conf.APICapabilityAccess, handleDeleteAccess))
 }
 
@@ -50,7 +50,7 @@ func handleAccess(w http.ResponseWriter, _ *http.Request) {
 	_ = netx.WriteSuccess(w, "Access rules fetched", map[string]any{"rules": rules})
 }
 
-func handlePatchAccess(w http.ResponseWriter, r *http.Request) {
+func handlePutAccess(w http.ResponseWriter, r *http.Request) {
 	var request accessRuleRequest
 	if !decodeRequest(w, r, &request) {
 		return

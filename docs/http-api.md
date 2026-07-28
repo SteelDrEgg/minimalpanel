@@ -28,7 +28,7 @@ restricted or disabled for HTTP callers with `Route.Allow`.
 | `User` | `DELETE` | `/api/user/{name}` | Delete a user |
 | `Group` | `GET` | `/api/group` | List groups and members |
 | `Group` | `GET` | `/api/group/{name}` | Read one group |
-| `Group` | `PATCH` | `/api/group/{name}` | Atomically replace its complete users array |
+| `Group` | `PUT` | `/api/group/{name}` | Atomically replace its complete users array |
 | `Group` | `DELETE` | `/api/group/{name}` | Delete a group |
 
 User responses never include password hashes. Group membership is stored as
@@ -43,7 +43,7 @@ arrays.
 | `Pages` | `PUT` | `/api/page/{status}` | Set a local page path |
 | `Pages` | `DELETE` | `/api/page/{status}` | Delete a page mapping |
 | `Access` | `GET` | `/api/access` | List route access rules |
-| `Access` | `PATCH` | `/api/access` | Create or replace a rule's complete groups array |
+| `Access` | `PUT` | `/api/access` | Create or replace a rule's complete groups array |
 | `Access` | `DELETE` | `/api/access` | Delete a rule |
 
 Access write requests carry `method`, `path`, and `groups` in the body. Method
