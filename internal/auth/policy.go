@@ -1,10 +1,6 @@
 package auth
 
-import (
-	"sort"
-
-	"arupa/internal/conf"
-)
+import "arupa/internal/conf"
 
 // User is the host-verified identity attached to an inbound service request.
 // An unauthenticated request has Authenticated=false and no user payload is
@@ -71,20 +67,9 @@ func UserForUsername(username string) User {
 		return User{}
 	}
 
-	groups := conf.GetGroups()
-	userGroups := make([]string, 0)
-	for group, users := range groups {
-		for _, candidate := range users {
-			if candidate == username {
-				userGroups = append(userGroups, group)
-				break
-			}
-		}
-	}
-	sort.Strings(userGroups)
 	return User{
 		Username:      username,
-		Groups:        userGroups,
+		Groups:        conf.GetGroupsForUser(username),
 		Authenticated: true,
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -53,10 +54,11 @@ type Supervisor struct {
 }
 
 type serviceEntry struct {
-	info       catalog.DiscoveredService
-	discovered bool
-	loaded     *instance.Instance
-	status     ServiceStatus
+	info          catalog.DiscoveredService
+	discovered    bool
+	loaded        *instance.Instance
+	loadedTempDir string
+	status        ServiceStatus
 }
 
 // ServiceEntry is a snapshot of a service known to the manager.
@@ -193,6 +195,7 @@ func (r *Supervisor) Scan() error {
 		}
 		if nextEntry, ok := next[name]; ok {
 			nextEntry.loaded = entry.loaded
+			nextEntry.loadedTempDir = entry.loadedTempDir
 			nextEntry.status = entry.currentStatus()
 		} else if entry.loaded != nil {
 			entry.discovered = false
@@ -272,6 +275,7 @@ func (r *Supervisor) StartByName(name string) (*instance.Instance, error) {
 	entry.status = ServiceStatusStarting
 	info := entry.info
 	cfg, tempDir := r.serviceConfig(name)
+	entry.loadedTempDir = tempDir
 	r.mu.Unlock()
 
 	lp, degraded, err := r.loadScanned(info, cfg, tempDir)
@@ -370,6 +374,7 @@ func (r *Supervisor) Load(path string) (*instance.Instance, error) {
 	entry.info = scanned
 	entry.discovered = true
 	entry.status = ServiceStatusStarting
+	entry.loadedTempDir = tempDir
 	r.mu.Unlock()
 
 	lp, degraded, err := r.loadScanned(scanned, cfg, tempDir)
@@ -458,6 +463,7 @@ func (r *Supervisor) finishStartFailure(name string) {
 	defer r.mu.Unlock()
 	if entry := r.services[name]; entry != nil && entry.currentStatus() == ServiceStatusStarting {
 		entry.loaded = nil
+		entry.loadedTempDir = ""
 		entry.status = ServiceStatusFailed
 	}
 }
@@ -467,8 +473,27 @@ func (r *Supervisor) finishStop(name string, status ServiceStatus) {
 	defer r.mu.Unlock()
 	if entry := r.services[name]; entry != nil && entry.currentStatus() == ServiceStatusStopping {
 		entry.loaded = nil
+		entry.loadedTempDir = ""
 		entry.status = status
 	}
+}
+
+// TempDirRequiresRestart reports whether a running service was loaded with a
+// different extraction directory from the current effective configuration.
+func (r *Supervisor) TempDirRequiresRestart(current string) bool {
+	current = filepath.Clean(strings.TrimSpace(current))
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, entry := range r.services {
+		if entry.loaded == nil || !statusIsRunning(entry.currentStatus()) {
+			continue
+		}
+		if filepath.Clean(strings.TrimSpace(entry.loadedTempDir)) != current {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Supervisor) cleanupLoaded(name string, lp *instance.Instance) error {
@@ -493,6 +518,7 @@ func (r *Supervisor) Close() error {
 		if entry.loaded != nil {
 			services = append(services, entry.loaded)
 			entry.loaded = nil
+			entry.loadedTempDir = ""
 			entry.status = ServiceStatusStopping
 		} else if entry.currentStatus() == ServiceStatusStarting {
 			entry.status = ServiceStatusFailed

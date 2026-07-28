@@ -29,9 +29,10 @@ var defaults = Config{
 }
 
 var configState = struct {
-	mu      sync.RWMutex
-	path    string
-	current Config
+	mu           sync.RWMutex
+	path         string
+	current      Config
+	groupsByUser map[string][]string
 }{}
 
 // LoadConfig selects path as the persistent configuration file and loads it.
@@ -64,7 +65,7 @@ func LoadConfig(path string) error {
 		if closeErr := file.Close(); closeErr != nil {
 			return fmt.Errorf("close config file: %w", closeErr)
 		}
-		configState.current = Config{}
+		publishLocked(Config{})
 		loaded = true
 		return nil
 	} else if err != nil {
@@ -96,8 +97,35 @@ func reloadLocked() error {
 		return err
 	}
 
-	configState.current = next
+	publishLocked(next)
 	return nil
+}
+
+func publishLocked(next Config) {
+	configState.current = next
+	configState.groupsByUser = indexGroupsByUser(next.Auth.Groups)
+}
+
+func indexGroupsByUser(groups map[string][]string) map[string][]string {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	index := make(map[string][]string)
+	for group, users := range groups {
+		seen := make(map[string]struct{}, len(users))
+		for _, username := range users {
+			if _, duplicate := seen[username]; duplicate {
+				continue
+			}
+			seen[username] = struct{}{}
+			index[username] = append(index[username], group)
+		}
+	}
+	for username := range index {
+		sort.Strings(index[username])
+	}
+	return index
 }
 
 func readConfigLocked() ([]byte, error) {
@@ -152,7 +180,7 @@ func validateConfig(cfg Config) error {
 
 func validateRouteAllow(allow map[string][]string) error {
 	for pattern := range allow {
-		if err := netx.ValidatePathPattern(pattern); err != nil {
+		if _, err := netx.ParseMethodPathPattern(pattern); err != nil {
 			return fmt.Errorf("invalid Route.Allow pattern: %w", err)
 		}
 	}
@@ -203,6 +231,21 @@ func validTOMLKey(key toml.Key) bool {
 			return true
 		}
 		return len(key) == 2 && (LogField(key[1]) == LogFieldFormat || LogField(key[1]) == LogFieldLevel)
+	case ConfigFieldAPI:
+		if len(key) == 1 {
+			return true
+		}
+		if len(key) != 2 {
+			return false
+		}
+		switch APICapability(key[1]) {
+		case APICapabilityUser, APICapabilityGroup, APICapabilityPages,
+			APICapabilityAccess, APICapabilityService, APICapabilityLog,
+			APICapabilityNetwork:
+			return true
+		default:
+			return false
+		}
 	case ConfigFieldUsers, ConfigFieldGroups, ConfigFieldPages:
 		return len(key) == 1 || len(key) == 2
 	case ConfigFieldRoute:
@@ -222,6 +265,31 @@ func validTOMLKey(key toml.Key) bool {
 		default:
 			return false
 		}
+	default:
+		return false
+	}
+}
+
+// APIEnabled reports whether a management capability is currently exposed.
+func APIEnabled(capability APICapability) bool {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+
+	switch capability {
+	case APICapabilityUser:
+		return configState.current.API.User
+	case APICapabilityGroup:
+		return configState.current.API.Group
+	case APICapabilityPages:
+		return configState.current.API.Pages
+	case APICapabilityAccess:
+		return configState.current.API.Access
+	case APICapabilityService:
+		return configState.current.API.Service
+	case APICapabilityLog:
+		return configState.current.API.Log
+	case APICapabilityNetwork:
+		return configState.current.API.Network
 	default:
 		return false
 	}
@@ -266,6 +334,47 @@ func GetUsers() map[string]string {
 	configState.mu.RLock()
 	defer configState.mu.RUnlock()
 	return cloneStrings(configState.current.Auth.Users)
+}
+
+// GetUserPasswordHash returns the stored password hash without cloning all
+// users. It is intended for authentication, not management API responses.
+func GetUserPasswordHash(username string) (string, bool) {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+	hash, ok := configState.current.Auth.Users[username]
+	return hash, ok
+}
+
+// GetGroupsForUser returns the current reverse group membership for username.
+// The result is derived from Groups and is valid even when Users does not
+// contain username, preserving the current session behavior.
+func GetGroupsForUser(username string) []string {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+	return cloneSlice(configState.groupsByUser[username])
+}
+
+// GetUsersWithGroups returns configured usernames and their derived group
+// memberships without exposing password hashes.
+func GetUsersWithGroups() map[string][]string {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+
+	out := make(map[string][]string, len(configState.current.Auth.Users))
+	for username := range configState.current.Auth.Users {
+		out[username] = cloneSlice(configState.groupsByUser[username])
+	}
+	return out
+}
+
+// GetUserWithGroups returns one configured username and its derived groups.
+func GetUserWithGroups(username string) ([]string, bool) {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+	if _, ok := configState.current.Auth.Users[username]; !ok {
+		return nil, false
+	}
+	return cloneSlice(configState.groupsByUser[username]), true
 }
 
 // GetGroups returns a copy of the configured group membership.
@@ -375,6 +484,7 @@ func cloneConfig(cfg Config) Config {
 		Listen: cfg.Listen,
 		TLS:    cfg.TLS,
 		Log:    cfg.Log,
+		API:    cfg.API,
 		Auth: Auth{
 			Users:  cloneStrings(cfg.Auth.Users),
 			Groups: cloneStringSlices(cfg.Auth.Groups),

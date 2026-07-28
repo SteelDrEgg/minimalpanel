@@ -47,6 +47,43 @@ intentionally left as a TODO. Without cooperative locking, an external write
 that races between Update's read and atomic replacement remains last-writer
 wins.
 
+## HTTP API capabilities
+
+The optional `[API]` table controls which management domains are exposed over
+HTTP. Missing fields are `false`.
+
+```toml
+[API]
+User = true
+Group = true
+Pages = true
+Access = true
+Service = true
+Log = true
+Network = true
+```
+
+Each capability is checked against the current conf state on every request, so
+Reload takes effect without rebuilding the HTTP mux. Disabled capability routes
+return not found. Session endpoints and kernel reload are not capability-gated.
+Every non-session management endpoint requires authentication.
+
+`Route.Allow` applies an optional group policy on top of endpoint
+authentication. Keys may use the backward-compatible path-only form, which
+matches every HTTP method, or a method-qualified form:
+
+```toml
+[Route.Allow]
+"/api/" = ["users"]
+"GET:/api/user" = ["auditors"]
+"PATCH:/api/user/" = ["administrators"]
+```
+
+Methods must be uppercase. `GET` also covers `HEAD`. Matching first selects the
+longest path; at the same path, a method-qualified rule wins over a path-only
+rule. An absent matching rule and a matching rule with an empty group list both
+allow access. Management handlers still enforce their baseline authentication.
+
 ## Defaults and services
 
 Defaults are hard-coded and are consulted when the current configuration does
@@ -76,6 +113,13 @@ For service inheritance:
 | Service `Restart`, `RunAsUser`, `Checksum` | The next start or explicit restart |
 | Service `Params` | The next Params query and the next start; Params already supplied during registration are not pushed into a running service |
 | `Listen`, `TLS`, `Log` | Kernel startup; changing them requires restarting the kernel |
+
+The management API derives `requires_restart` by comparing the current
+effective value with the value actually used by the running component.
+Listen, TLS, and Log are compared with the kernel's startup values. For
+ServiceTempDir, each running service records the directory used when it was
+loaded; the flag remains true until no running service uses a different
+directory.
 
 Existing authentication sessions currently remain valid until logout or
 expiry after user configuration changes. The desired invalidation behavior is

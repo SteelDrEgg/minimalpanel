@@ -70,6 +70,19 @@ func tomlDocumentValue(value any) any {
 			out[string(LogFieldLevel)] = value.Level
 		}
 		return out
+	case APIConfig:
+		out := make(map[string]any, 7)
+		for capability, enabled := range map[APICapability]bool{
+			APICapabilityUser: value.User, APICapabilityGroup: value.Group,
+			APICapabilityPages: value.Pages, APICapabilityAccess: value.Access,
+			APICapabilityService: value.Service, APICapabilityLog: value.Log,
+			APICapabilityNetwork: value.Network,
+		} {
+			if enabled {
+				out[string(capability)] = true
+			}
+		}
+		return out
 	case RouteConfig:
 		out := make(map[string]any, 1)
 		if value.Allow != nil {

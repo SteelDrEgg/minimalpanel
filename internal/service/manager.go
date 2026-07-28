@@ -218,6 +218,16 @@ func (m *Manager) Restart(name string) error {
 	return m.Start(name)
 }
 
+// TempDirRequiresRestart reports whether any running service still uses a
+// different extraction directory from the current effective configuration.
+func (m *Manager) TempDirRequiresRestart() bool {
+	if m == nil || m.runtime == nil {
+		return false
+	}
+	_, tempDir := conf.GetServicePaths()
+	return m.runtime.TempDirRequiresRestart(tempDir)
+}
+
 // StartConfigured starts all discovered services whose effective config enables
 // auto-start.
 func (m *Manager) StartConfigured() error {

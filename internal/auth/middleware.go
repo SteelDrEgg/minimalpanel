@@ -53,7 +53,7 @@ func RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 func RouteAccess(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		allow := conf.GetRouteAllow()
-		_, groups, ok := matchRouteAccess(r.URL.Path, allow)
+		_, groups, ok := matchRouteAccess(r.Method, r.URL.Path, allow)
 		if !ok {
 			next.ServeHTTP(w, r)
 			return
@@ -67,14 +67,25 @@ func RouteAccess(next http.Handler) http.Handler {
 	})
 }
 
-func matchRouteAccess(path string, allow map[string][]string) (string, []string, bool) {
+func matchRouteAccess(method, path string, allow map[string][]string) (string, []string, bool) {
 	best := ""
+	bestPathLength := -1
+	bestMethodRank := -1
 	var groups []string
-	for pattern, candidateGroups := range allow {
-		if !netx.MatchPathPattern(path, pattern, netx.RootPathExact) || len(pattern) <= len(best) {
+	for key, candidateGroups := range allow {
+		pattern, err := netx.ParseMethodPathPattern(key)
+		if err != nil || !netx.MatchMethodPathPattern(method, path, pattern, netx.RootPathExact) {
 			continue
 		}
-		best = pattern
+		pathLength := len(pattern.Path)
+		methodRank := netx.MethodMatchRank(method, pattern.Method)
+		if pathLength < bestPathLength ||
+			(pathLength == bestPathLength && methodRank <= bestMethodRank) {
+			continue
+		}
+		best = key
+		bestPathLength = pathLength
+		bestMethodRank = methodRank
 		groups = candidateGroups
 	}
 	return best, groups, best != ""

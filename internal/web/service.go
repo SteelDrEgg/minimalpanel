@@ -1,28 +1,14 @@
 package web
 
 import (
-	"arupa/internal/auth"
 	"arupa/internal/conf"
 	"arupa/internal/netx"
 	"arupa/internal/service"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"sort"
 	"strings"
 )
-
-// serviceActionRequest is the common JSON payload for start/stop/restart.
-type serviceActionRequest struct {
-	Name string `json:"name"`
-}
-
-// serviceConfigRequest carries service directory settings from the management UI.
-type serviceConfigRequest struct {
-	ServiceDir     string `json:"service_dir"`
-	ServiceTempDir string `json:"service_temp_dir"`
-}
 
 // serviceView is the catalog row returned to the management UI. It combines
 // scanned package metadata with the current runtime status.
@@ -56,24 +42,25 @@ type serviceListInclude struct {
 // StartService registers service management endpoints used by frontend pages.
 // All service endpoints are protected.
 func StartService(mux *http.ServeMux, sm *service.Manager) {
-	mux.HandleFunc("/api/services/discovered", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/service/discovered", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
 		handleServiceDiscovered(w, r, sm)
 	}))
-	mux.HandleFunc("/api/services/running", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/service/running", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
 		handleServiceRunning(w, r, sm)
 	}))
-	mux.HandleFunc("/api/services/start", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/service/detail/{name}", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
+		handleServiceDetail(w, r, sm)
+	}))
+	mux.HandleFunc("POST /api/service/start/{name}", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
 		handleServiceStart(w, r, sm)
 	}))
-	mux.HandleFunc("/api/services/stop", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/service/stop/{name}", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
 		handleServiceStop(w, r, sm)
 	}))
-	mux.HandleFunc("/api/services/restart", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/service/restart/{name}", management(conf.APICapabilityService, func(w http.ResponseWriter, r *http.Request) {
 		handleServiceRestart(w, r, sm)
 	}))
-	mux.HandleFunc("/api/services/config", auth.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-		handleServiceConfig(w, r, sm)
-	}))
+	startServiceConfig(mux, sm)
 }
 
 // handleServiceDiscovered scans the service directory and returns the
@@ -120,6 +107,31 @@ func handleServiceRunning(w http.ResponseWriter, r *http.Request, sm *service.Ma
 	netx.WriteSuccess(w, "Running services fetched", map[string]any{
 		"services": running,
 	})
+}
+
+func handleServiceDetail(w http.ResponseWriter, r *http.Request, sm *service.Manager) {
+	name := strings.TrimSpace(r.PathValue("name"))
+	if name == "" {
+		netx.WriteBadRequest(w, "Service name is required")
+		return
+	}
+	if err := sm.Scan(); err != nil {
+		netx.WriteInternalServerError(w, "Failed to read service directory", err)
+		return
+	}
+
+	include, err := parseServiceListInclude(r)
+	if err != nil {
+		netx.WriteBadRequest(w, err.Error())
+		return
+	}
+	for _, entry := range sm.Entries() {
+		if entry.Name == name {
+			netx.WriteSuccess(w, "Service fetched", newServiceView(entry, include))
+			return
+		}
+	}
+	netx.WriteNotFound(w)
 }
 
 // parseServiceListInclude parses additive response fields from repeated and
@@ -172,12 +184,7 @@ func newServiceView(entry service.ServiceEntry, include serviceListInclude) serv
 }
 
 func handleServiceStart(w http.ResponseWriter, r *http.Request, sm *service.Manager) {
-	if r.Method != http.MethodPost {
-		netx.WriteMethodNotAllowed(w)
-		return
-	}
-
-	name, ok := readServiceActionName(w, r)
+	name, ok := serviceNameFromPath(w, r)
 	if !ok {
 		return
 	}
@@ -193,12 +200,7 @@ func handleServiceStart(w http.ResponseWriter, r *http.Request, sm *service.Mana
 }
 
 func handleServiceStop(w http.ResponseWriter, r *http.Request, sm *service.Manager) {
-	if r.Method != http.MethodPost {
-		netx.WriteMethodNotAllowed(w)
-		return
-	}
-
-	name, ok := readServiceActionName(w, r)
+	name, ok := serviceNameFromPath(w, r)
 	if !ok {
 		return
 	}
@@ -214,12 +216,7 @@ func handleServiceStop(w http.ResponseWriter, r *http.Request, sm *service.Manag
 }
 
 func handleServiceRestart(w http.ResponseWriter, r *http.Request, sm *service.Manager) {
-	if r.Method != http.MethodPost {
-		netx.WriteMethodNotAllowed(w)
-		return
-	}
-
-	name, ok := readServiceActionName(w, r)
+	name, ok := serviceNameFromPath(w, r)
 	if !ok {
 		return
 	}
@@ -234,78 +231,11 @@ func handleServiceRestart(w http.ResponseWriter, r *http.Request, sm *service.Ma
 	})
 }
 
-func readServiceActionName(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var req serviceActionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		netx.WriteBadRequest(w, "Invalid request body")
-		return "", false
-	}
-
-	name := strings.TrimSpace(req.Name)
+func serviceNameFromPath(w http.ResponseWriter, r *http.Request) (string, bool) {
+	name := strings.TrimSpace(r.PathValue("name"))
 	if name == "" {
 		netx.WriteBadRequest(w, "Service name is required")
 		return "", false
 	}
 	return name, true
-}
-
-func handleServiceConfig(w http.ResponseWriter, r *http.Request, sm *service.Manager) {
-	switch r.Method {
-	case http.MethodGet:
-		serviceDir, serviceTempDir := conf.GetServicePaths()
-		netx.WriteSuccess(w, "Service config fetched", map[string]any{
-			"service_dir":      serviceDir,
-			"service_temp_dir": serviceTempDir,
-		})
-	case http.MethodPut:
-		var req serviceConfigRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			netx.WriteBadRequest(w, "Invalid request body")
-			return
-		}
-
-		req.ServiceDir = strings.TrimSpace(req.ServiceDir)
-		req.ServiceTempDir = strings.TrimSpace(req.ServiceTempDir)
-		if req.ServiceDir == "" || req.ServiceTempDir == "" {
-			netx.WriteBadRequest(w, "service_dir and service_temp_dir are required")
-			return
-		}
-
-		// Validate/create directories first, then persist config.
-		if err := os.MkdirAll(req.ServiceDir, 0o755); err != nil {
-			netx.WriteBadRequest(w, fmt.Sprintf("Invalid service_dir: %v", err))
-			return
-		}
-		if err := os.MkdirAll(req.ServiceTempDir, 0o755); err != nil {
-			netx.WriteBadRequest(w, fmt.Sprintf("Invalid service_temp_dir: %v", err))
-			return
-		}
-
-		_, oldServiceTempDir := conf.GetServicePaths()
-		if err := conf.Update(
-			conf.Set(conf.JoinPath(string(conf.ConfigFieldServiceDir)), req.ServiceDir),
-			conf.Set(conf.JoinPath(string(conf.ConfigFieldServiceTempDir)), req.ServiceTempDir),
-		); err != nil {
-			netx.WriteInternalServerError(w, "Failed to persist service config", err)
-			return
-		}
-
-		if err := sm.Scan(); err != nil {
-			netx.WriteInternalServerError(w, "Service config saved, but scan failed", err)
-			return
-		}
-
-		newServiceDir, newServiceTempDir := conf.GetServicePaths()
-		tempDirChanged := oldServiceTempDir != newServiceTempDir
-		netx.WriteSuccess(w, "Service config updated", map[string]any{
-			"service_dir":                     newServiceDir,
-			"service_temp_dir":                newServiceTempDir,
-			"temp_dir_requires_restart":       tempDirChanged,
-			"temp_dir_restart_reason":         "running services keep their current extraction directory",
-			"discovered_service_count":        len(sm.Entries()),
-			"scan_path_effective_immediately": true,
-		})
-	default:
-		netx.WriteMethodNotAllowed(w)
-	}
 }

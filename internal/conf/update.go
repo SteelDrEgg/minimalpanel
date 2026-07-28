@@ -13,6 +13,7 @@ const (
 	ConfigFieldListen         ConfigField = "Listen"
 	ConfigFieldTLS            ConfigField = "TLS"
 	ConfigFieldLog            ConfigField = "Log"
+	ConfigFieldAPI            ConfigField = "API"
 	ConfigFieldUsers          ConfigField = "Users"
 	ConfigFieldGroups         ConfigField = "Groups"
 	ConfigFieldRoute          ConfigField = "Route"
@@ -20,6 +21,18 @@ const (
 	ConfigFieldServiceTempDir ConfigField = "ServiceTempDir"
 	ConfigFieldServices       ConfigField = "Services"
 	ConfigFieldPages          ConfigField = "Pages"
+)
+
+type APICapability string
+
+const (
+	APICapabilityUser    APICapability = "User"
+	APICapabilityGroup   APICapability = "Group"
+	APICapabilityPages   APICapability = "Pages"
+	APICapabilityAccess  APICapability = "Access"
+	APICapabilityService APICapability = "Service"
+	APICapabilityLog     APICapability = "Log"
+	APICapabilityNetwork APICapability = "Network"
 )
 
 type LogField string
@@ -141,7 +154,7 @@ func Update(operations ...Operation) error {
 	if reflect.DeepEqual(configState.current, editor.next) {
 		return nil
 	}
-	configState.current = editor.next
+	publishLocked(editor.next)
 	return nil
 }
 
@@ -232,6 +245,8 @@ func (e *configEditor) apply(operation Operation, segments []string) error {
 		return applyBool(&e.next.TLS, operation, segments)
 	case ConfigFieldLog:
 		return e.applyLog(operation, segments[1:])
+	case ConfigFieldAPI:
+		return e.applyAPI(operation, segments[1:])
 	case ConfigFieldUsers:
 		return e.applyUsers(operation, segments[1:])
 	case ConfigFieldGroups:
@@ -249,6 +264,48 @@ func (e *configEditor) apply(operation Operation, segments []string) error {
 	default:
 		return fmt.Errorf("unknown or incorrectly cased field %q", segments[0])
 	}
+}
+
+func (e *configEditor) applyAPI(operation Operation, segments []string) error {
+	if len(segments) == 0 {
+		switch operation.Type {
+		case OperationSet:
+			value, ok := operation.Value.(APIConfig)
+			if !ok {
+				return fmt.Errorf("expected conf.APIConfig, got %T", operation.Value)
+			}
+			e.next.API = value
+		case OperationRemove:
+			e.next.API = APIConfig{}
+		default:
+			return fmt.Errorf("unknown operation type %d", operation.Type)
+		}
+		return nil
+	}
+	if len(segments) != 1 {
+		return fmt.Errorf("API.%s is not a container", segments[0])
+	}
+
+	var target *bool
+	switch APICapability(segments[0]) {
+	case APICapabilityUser:
+		target = &e.next.API.User
+	case APICapabilityGroup:
+		target = &e.next.API.Group
+	case APICapabilityPages:
+		target = &e.next.API.Pages
+	case APICapabilityAccess:
+		target = &e.next.API.Access
+	case APICapabilityService:
+		target = &e.next.API.Service
+	case APICapabilityLog:
+		target = &e.next.API.Log
+	case APICapabilityNetwork:
+		target = &e.next.API.Network
+	default:
+		return fmt.Errorf("unknown or incorrectly cased API field %q", segments[0])
+	}
+	return applyBool(target, operation, segments)
 }
 
 func applyString(target *string, operation Operation, fullPath []string) error {
