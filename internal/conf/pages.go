@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// GetPages returns a copy of the configured status-page mappings.
+func GetPages() map[string]string {
+	configState.mu.RLock()
+	defer configState.mu.RUnlock()
+	return cloneStrings(configState.current.Pages)
+}
+
 // GetPagePath returns the configured local page path for an HTTP status code.
 func GetPagePath(statusCode int) (string, bool) {
 	if statusCode < 100 || statusCode > 599 {

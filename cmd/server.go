@@ -28,6 +28,14 @@ func runServer(logger *slog.Logger) error {
 	// Keep auth endpoints so protected service routes/events can be used.
 	web.StartLogin(mux)
 
+	listen := conf.GetListen()
+	tlsEnabled := conf.GetTLS()
+	applied := web.AppliedConfig{
+		Listen: listen,
+		TLS:    tlsEnabled,
+		Log:    conf.GetLog(),
+	}
+
 	sm, err := service.NewManager(service.Options{
 		Mux:    mux,
 		Socket: socketServer,
@@ -35,15 +43,20 @@ func runServer(logger *slog.Logger) error {
 		ReservedHTTP: []string{
 			"/socket.io/",
 			"/api/login", "/api/logout", "/api/check-auth",
-			"/api/services", "/api/services/start",
-			"/api/services/stop", "/api/services/restart", "/api/services/config",
-			"/api/kernel/version", "/api/kernel/reload",
+			"/api/user", "/api/user/",
+			"/api/group", "/api/group/",
+			"/api/page", "/api/page/",
+			"/api/access",
+			"/api/log/", "/api/network/",
+			"/api/service", "/api/service/",
+			"/api/kernel/",
 		},
 	})
 	if err != nil {
 		return err
 	}
 	defer sm.Close()
+	web.StartConfig(mux, applied)
 	web.StartService(mux, sm)
 
 	reloadConfig := func() error {
@@ -69,8 +82,6 @@ func runServer(logger *slog.Logger) error {
 		serverLog.Info("discovered service", logArgs...)
 	}
 
-	listen := conf.GetListen()
-	tlsEnabled := conf.GetTLS()
 	handler := logHTTPRequests(logger, auth.WithUser(auth.RouteAccess(mux)))
 	srv := &http.Server{Addr: listen, Handler: handler}
 	if tlsEnabled {

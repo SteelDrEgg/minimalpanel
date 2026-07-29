@@ -4,10 +4,23 @@ type Config struct {
 	Listen string    `toml:",omitempty"`
 	TLS    bool      `toml:",omitempty"`
 	Log    LogConfig `toml:",omitempty"`
+	API    APIConfig `toml:",omitempty"`
 	Auth
 	Route RouteConfig `toml:",omitempty"`
 	ServiceSystem
 	Pages map[string]string
+}
+
+// APIConfig controls which management capabilities are exposed over HTTP.
+// Session and kernel reload endpoints are not capability-gated.
+type APIConfig struct {
+	User    bool `toml:",omitempty"`
+	Group   bool `toml:",omitempty"`
+	Pages   bool `toml:",omitempty"`
+	Access  bool `toml:",omitempty"`
+	Service bool `toml:",omitempty"`
+	Log     bool `toml:",omitempty"`
+	Network bool `toml:",omitempty"`
 }
 
 // LogConfig controls the process-wide structured log output.

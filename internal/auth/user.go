@@ -27,8 +27,7 @@ func NewUser(name string, password string) error {
 
 // VerifyPassword verifies a user's password against the stored hash
 func VerifyPassword(name string, password string) bool {
-	users := conf.GetUsers()
-	hashedPassword, exists := users[name]
+	hashedPassword, exists := conf.GetUserPasswordHash(name)
 	if !exists {
 		return false
 	}
