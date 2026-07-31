@@ -161,8 +161,12 @@ func (r *Registry) registerHTTPLocked(prepared *binding) error {
 			prefix := *declaration.Rewrite.Prefix
 			rewrite.Prefix = &prefix
 		}
+		if declaration.Rewrite.Location != nil {
+			location := *declaration.Rewrite.Location
+			rewrite.Location = &location
+		}
 		declaration.Rewrite = &rewrite
-		if rewrite.Location && !httprewrite.PrefixEnabled(&rewrite) {
+		if httprewrite.LocationEnabled(&rewrite) && !httprewrite.PrefixEnabled(&rewrite) {
 			return r.reject(prepared.owner, prepared.route,
 				fmt.Errorf("http route %q location rewrite requires prefix rewrite", prepared.route.ID))
 		}

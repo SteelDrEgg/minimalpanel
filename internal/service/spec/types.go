@@ -49,7 +49,7 @@ type Transport struct {
 
 type RewriteRule struct {
 	Prefix   *bool `json:"prefix,omitempty" yaml:"prefix,omitempty"`
-	Location bool  `json:"location,omitempty" yaml:"location,omitempty"`
+	Location *bool `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
 type HTTPRoute struct {

@@ -132,6 +132,12 @@ http:
 prefix behavior applies within contract version 2 and intentionally changes
 the earlier proxy and HTTP RPC path-preservation behavior.
 
+The kernel owns these defaults: `prefix` defaults to true and `location`
+defaults to false. The internal rule represents both values as optional
+booleans. The protobuf `RewriteRule` fields are deliberately non-optional; when
+a service sends that message, both values are treated as explicit. A service
+omits the entire `rewrite` message to use the kernel defaults.
+
 ## Kernel package boundaries
 
 The root `internal/service` package is only the composition root and public

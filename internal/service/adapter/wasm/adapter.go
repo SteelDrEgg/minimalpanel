@@ -266,12 +266,9 @@ func rewriteFromProto(in *wasmpb.RewriteRule) *spec.RewriteRule {
 	if in == nil {
 		return nil
 	}
-	var prefix *bool
-	if in.Prefix != nil {
-		value := in.GetPrefix()
-		prefix = &value
-	}
-	return &spec.RewriteRule{Prefix: prefix, Location: in.GetLocation()}
+	prefix := in.GetPrefix()
+	location := in.GetLocation()
+	return &spec.RewriteRule{Prefix: &prefix, Location: &location}
 }
 
 func accessFromProto(policy *wasmpb.AccessPolicy) spec.AccessPolicy {

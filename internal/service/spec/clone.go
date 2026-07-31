@@ -26,6 +26,10 @@ func CloneServiceRecord(record *ServiceRecord) *ServiceRecord {
 					prefix := *declaration.HTTP.Rewrite.Prefix
 					rewrite.Prefix = &prefix
 				}
+				if declaration.HTTP.Rewrite.Location != nil {
+					location := *declaration.HTTP.Rewrite.Location
+					rewrite.Location = &location
+				}
 				httpRoute.Rewrite = &rewrite
 			}
 			httpRoute.Access.Groups = append([]string(nil), declaration.HTTP.Access.Groups...)

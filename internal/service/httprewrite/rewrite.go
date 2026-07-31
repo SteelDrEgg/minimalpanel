@@ -32,6 +32,12 @@ func PrefixEnabled(rule *spec.RewriteRule) bool {
 	return rule == nil || rule.Prefix == nil || *rule.Prefix
 }
 
+// LocationEnabled reports the effective Location behavior. Root-relative
+// Location headers are preserved unless explicitly enabled.
+func LocationEnabled(rule *spec.RewriteRule) bool {
+	return rule != nil && rule.Location != nil && *rule.Location
+}
+
 // Handler wraps next with the route's request rewrite. Matching and access
 // checks must run before this handler so they continue to use the external path.
 func Handler(pattern string, rule *spec.RewriteRule, next http.Handler) http.Handler {
@@ -42,7 +48,7 @@ func Handler(pattern string, rule *spec.RewriteRule, next http.Handler) http.Han
 	if prefix == "" {
 		return next
 	}
-	location := rule != nil && rule.Location
+	location := LocationEnabled(rule)
 	stripped := http.StripPrefix(prefix, http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		if request.URL.Path == "" {
 			clone := request.Clone(request.Context())
