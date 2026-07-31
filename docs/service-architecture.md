@@ -101,7 +101,36 @@ identity headers and injects:
 - `X-Arupa-User`
 - one `X-Arupa-Group` value per verified group
 
-The original path, query, and Host header are preserved.
+An HTTP route pattern is an external mount point. By default, the matched route
+prefix is removed before dispatch to HTTP RPC, static, or proxy transports:
+
+```yaml
+http:
+  pattern: /app/
+  rewrite:
+    location: true
+```
+
+For example, `/app/users?q=1` is dispatched as `/users?q=1`. HTTP RPC and proxy
+transports receive a kernel-owned `X-Forwarded-Prefix: /app` header. Query,
+Host, and request headers otherwise retain their existing behavior. The root
+pattern `/` has no mount prefix, so its path is unchanged.
+
+`location` defaults to false. When enabled, it prepends the removed prefix to
+root-relative downstream `Location` response headers. Relative,
+scheme-relative, and absolute locations are unchanged. A route can explicitly
+preserve its external path:
+
+```yaml
+http:
+  pattern: /legacy/
+  rewrite:
+    prefix: false
+```
+
+`location: true` is invalid when `prefix` is explicitly false. This default
+prefix behavior applies within contract version 2 and intentionally changes
+the earlier proxy and HTTP RPC path-preservation behavior.
 
 ## Kernel package boundaries
 

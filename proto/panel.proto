@@ -112,10 +112,16 @@ message Transport {
   }
 }
 
+message RewriteRule {
+  optional bool prefix = 1;
+  bool location = 2;
+}
+
 message HTTPRoute {
   string method = 1;
   string pattern = 2;
   AccessPolicy access = 3;
+  RewriteRule rewrite = 4;
 }
 
 message SocketIORoute {

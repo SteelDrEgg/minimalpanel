@@ -16,6 +16,7 @@ import (
 	"arupa/internal/auth"
 	"arupa/internal/conf"
 	"arupa/internal/netx"
+	"arupa/internal/service/httprewrite"
 	"arupa/internal/service/spec"
 	"arupa/internal/service/transport"
 )
@@ -153,6 +154,18 @@ func (r *Registry) registerHTTPLocked(prepared *binding) error {
 	case spec.TransportHTTP, spec.TransportStatic, spec.TransportProxy:
 	default:
 		return r.reject(prepared.owner, prepared.route, fmt.Errorf("http route %q cannot use %s transport", prepared.route.ID, prepared.transport.Spec().Type))
+	}
+	if declaration.Rewrite != nil {
+		rewrite := *declaration.Rewrite
+		if declaration.Rewrite.Prefix != nil {
+			prefix := *declaration.Rewrite.Prefix
+			rewrite.Prefix = &prefix
+		}
+		declaration.Rewrite = &rewrite
+		if rewrite.Location && !httprewrite.PrefixEnabled(&rewrite) {
+			return r.reject(prepared.owner, prepared.route,
+				fmt.Errorf("http route %q location rewrite requires prefix rewrite", prepared.route.ID))
+		}
 	}
 	declaration.Method = normalizeMethod(declaration.Method)
 	prepared.route.HTTP = &declaration
@@ -359,23 +372,30 @@ func (r *Registry) serveBinding(current *binding, w http.ResponseWriter, request
 		return
 	}
 
-	switch current.transport.Spec().Type {
-	case spec.TransportHTTP:
-		serveRPC(current, w, request, user)
-	case spec.TransportStatic:
-		serveStatic(current, w, request)
-	case spec.TransportProxy:
-		current.transport.Handler().ServeHTTP(w, request)
-	default:
-		_ = netx.WriteError(w, http.StatusBadGateway, "invalid route transport", nil)
-	}
+	handler := httprewrite.Handler(
+		current.route.HTTP.Pattern,
+		current.route.HTTP.Rewrite,
+		http.HandlerFunc(func(w http.ResponseWriter, downstream *http.Request) {
+			switch current.transport.Spec().Type {
+			case spec.TransportHTTP:
+				serveRPC(current, w, downstream, user)
+			case spec.TransportStatic:
+				serveStatic(current, w, downstream)
+			case spec.TransportProxy:
+				current.transport.Handler().ServeHTTP(w, downstream)
+			default:
+				_ = netx.WriteError(w, http.StatusBadGateway, "invalid route transport", nil)
+			}
+		}),
+	)
+	handler.ServeHTTP(w, request)
 }
 
 func serveStatic(current *binding, w http.ResponseWriter, request *http.Request) {
+	w = httprewrite.ResponseWriter(w, request)
 	path := current.transport.StaticPath()
 	if current.transport.StaticDirectory() {
-		prefix := strings.TrimSuffix(current.route.HTTP.Pattern, "/")
-		http.StripPrefix(prefix, http.FileServer(http.Dir(path))).ServeHTTP(w, request)
+		http.FileServer(http.Dir(path)).ServeHTTP(w, request)
 		return
 	}
 	file, err := os.Open(path)
@@ -403,6 +423,7 @@ func serveRPC(current *binding, w http.ResponseWriter, request *http.Request, us
 		return
 	}
 	headers := request.Header.Clone()
+	httprewrite.SetForwardedPrefix(headers, request)
 	transport.InjectVerifiedIdentity(headers, user)
 	endpoint := current.transport.Endpoint()
 	ctx, cancel := endpoint.CallContext(request.Context())
@@ -417,7 +438,9 @@ func serveRPC(current *binding, w http.ResponseWriter, request *http.Request, us
 		_ = netx.WriteError(w, http.StatusBadGateway, "service handler failed", err)
 		return
 	}
-	for name, values := range response.Headers {
+	responseHeaders := response.Headers.Clone()
+	httprewrite.RewriteResponseHeaders(responseHeaders, request)
+	for name, values := range responseHeaders {
 		for _, value := range values {
 			w.Header().Add(name, value)
 		}

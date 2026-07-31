@@ -242,7 +242,8 @@ func routesFromProto(routes []*wasmpb.Route) ([]spec.Route, error) {
 		if httpRoute := in.GetHttp(); httpRoute != nil {
 			declaration.HTTP = &spec.HTTPRoute{
 				Method: httpRoute.GetMethod(), Pattern: httpRoute.GetPattern(),
-				Access: accessFromProto(httpRoute.GetAccess()),
+				Rewrite: rewriteFromProto(httpRoute.GetRewrite()),
+				Access:  accessFromProto(httpRoute.GetAccess()),
 			}
 		} else if socketRoute := in.GetSocketIo(); socketRoute != nil {
 			eventAccess := make(map[string]spec.AccessPolicy, len(socketRoute.GetEventAccess()))
@@ -259,6 +260,18 @@ func routesFromProto(routes []*wasmpb.Route) ([]spec.Route, error) {
 		out = append(out, declaration)
 	}
 	return out, nil
+}
+
+func rewriteFromProto(in *wasmpb.RewriteRule) *spec.RewriteRule {
+	if in == nil {
+		return nil
+	}
+	var prefix *bool
+	if in.Prefix != nil {
+		value := in.GetPrefix()
+		prefix = &value
+	}
+	return &spec.RewriteRule{Prefix: prefix, Location: in.GetLocation()}
 }
 
 func accessFromProto(policy *wasmpb.AccessPolicy) spec.AccessPolicy {

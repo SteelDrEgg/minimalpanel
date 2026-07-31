@@ -47,9 +47,15 @@ type Transport struct {
 	Proxy        *ProxyTarget  `json:"proxy,omitempty" yaml:"proxy,omitempty"`
 }
 
+type RewriteRule struct {
+	Prefix   *bool `json:"prefix,omitempty" yaml:"prefix,omitempty"`
+	Location bool  `json:"location,omitempty" yaml:"location,omitempty"`
+}
+
 type HTTPRoute struct {
 	Method  string       `json:"method,omitempty" yaml:"method,omitempty"`
 	Pattern string       `json:"pattern" yaml:"pattern"`
+	Rewrite *RewriteRule `json:"rewrite,omitempty" yaml:"rewrite,omitempty"`
 	Access  AccessPolicy `json:"access,omitempty" yaml:"access,omitempty"`
 }
 
