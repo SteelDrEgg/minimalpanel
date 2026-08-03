@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"arupa/internal/auth"
+	"arupa/internal/service/httprewrite"
 	"arupa/internal/service/spec"
 )
 
@@ -24,6 +25,7 @@ const (
 	IdentityUserHeader          = "X-Arupa-User"
 	IdentityGroupHeader         = "X-Arupa-Group"
 	IdentityAuthenticatedHeader = "X-Arupa-Authenticated"
+	ForwardedPrefixHeader       = httprewrite.ForwardedPrefixHeader
 )
 
 type key struct {
@@ -237,7 +239,12 @@ func NewProxyHandler(target *spec.ProxyTarget, inherited map[string]string) (htt
 			request.SetURL(upstream)
 			request.Out.Host = originalHost
 			request.SetXForwarded()
+			httprewrite.SetForwardedPrefix(request.Out.Header, request.In)
 			InjectVerifiedIdentity(request.Out.Header, auth.UserFromRequest(request.In))
+		},
+		ModifyResponse: func(response *http.Response) error {
+			httprewrite.RewriteResponseHeaders(response.Header, response.Request)
+			return nil
 		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
 			http.Error(w, "bad gateway: "+err.Error(), http.StatusBadGateway)

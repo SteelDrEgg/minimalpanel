@@ -10,19 +10,5 @@ ServiceTempDir = "tmp"
 
 [Services]
   [Services.default]
-    Restart = "no"
+    Restart = "yes"
     RunAsUser = ""
-
-  # Core services
-  [Services.hello]
-    Restart = "always"
-    [Services.hello.Params]
-      greeting = "env://HIHI"
-  [Services.web-assets]
-    Restart = "always"
-  [Services.login]
-    Restart = "always"
-  [Services.navigator]
-    Restart = "always"
-  [Services.service-manager]
-    Restart = "always"

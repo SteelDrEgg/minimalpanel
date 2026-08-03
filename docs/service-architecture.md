@@ -101,7 +101,27 @@ identity headers and injects:
 - `X-Arupa-User`
 - one `X-Arupa-Group` value per verified group
 
-The original path, query, and Host header are preserved.
+HTTP RPC, static, and proxy routes preserve the matched route prefix by
+default. Routes can explicitly remove it before transport dispatch:
+
+```yaml
+http:
+  pattern: /app/
+  rewrite:
+    prefix: true
+    location: true
+```
+
+For example, `/app/users?q=1` is dispatched as `/users?q=1`. Query, Host, and
+request headers otherwise retain their existing behavior.
+
+Both `prefix` and `location` are ordinary booleans and default to false in the
+kernel. When `prefix` is enabled, HTTP RPC and proxy transports receive a
+kernel-owned `X-Forwarded-Prefix` header. When `location` is also enabled, the
+kernel prepends the removed prefix to root-relative downstream `Location`
+response headers. Relative, scheme-relative, and absolute locations are
+unchanged. `location: true` is invalid without `prefix: true`. The root pattern
+`/` has no removable mount prefix, so enabling these rules there is a no-op.
 
 ## Kernel package boundaries
 

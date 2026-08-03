@@ -35,6 +35,7 @@ const (
 
 type ProxyTarget = spec.ProxyTarget
 type Transport = spec.Transport
+type RewriteRule = spec.RewriteRule
 type HTTPRoute = spec.HTTPRoute
 type SocketIORoute = spec.SocketIORoute
 type Route = spec.Route

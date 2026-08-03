@@ -255,7 +255,8 @@ func routesFromProto(routes []*grpcpb.Route) ([]spec.Route, error) {
 		if httpRoute := in.GetHttp(); httpRoute != nil {
 			declaration.HTTP = &spec.HTTPRoute{
 				Method: httpRoute.GetMethod(), Pattern: httpRoute.GetPattern(),
-				Access: accessFromProto(httpRoute.GetAccess()),
+				Rewrite: rewriteFromProto(httpRoute.GetRewrite()),
+				Access:  accessFromProto(httpRoute.GetAccess()),
 			}
 		} else if socketRoute := in.GetSocketIo(); socketRoute != nil {
 			eventAccess := make(map[string]spec.AccessPolicy, len(socketRoute.GetEventAccess()))
@@ -272,6 +273,13 @@ func routesFromProto(routes []*grpcpb.Route) ([]spec.Route, error) {
 		out = append(out, declaration)
 	}
 	return out, nil
+}
+
+func rewriteFromProto(in *grpcpb.RewriteRule) *spec.RewriteRule {
+	if in == nil {
+		return nil
+	}
+	return &spec.RewriteRule{Prefix: in.GetPrefix(), Location: in.GetLocation()}
 }
 
 func accessFromProto(policy *grpcpb.AccessPolicy) spec.AccessPolicy {
