@@ -26,16 +26,14 @@ type responseWriter struct {
 	wroteHeader bool
 }
 
-// PrefixEnabled reports the effective prefix behavior. HTTP routes strip their
-// external mount prefix by default; an explicit false value preserves it.
+// PrefixEnabled reports whether route-prefix rewriting is enabled.
 func PrefixEnabled(rule *spec.RewriteRule) bool {
-	return rule == nil || rule.Prefix == nil || *rule.Prefix
+	return rule != nil && rule.Prefix
 }
 
-// LocationEnabled reports the effective Location behavior. Root-relative
-// Location headers are preserved unless explicitly enabled.
+// LocationEnabled reports whether root-relative Location rewriting is enabled.
 func LocationEnabled(rule *spec.RewriteRule) bool {
-	return rule != nil && rule.Location != nil && *rule.Location
+	return rule != nil && rule.Location
 }
 
 // Handler wraps next with the route's request rewrite. Matching and access

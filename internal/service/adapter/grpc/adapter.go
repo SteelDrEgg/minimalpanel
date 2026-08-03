@@ -279,9 +279,7 @@ func rewriteFromProto(in *grpcpb.RewriteRule) *spec.RewriteRule {
 	if in == nil {
 		return nil
 	}
-	prefix := in.GetPrefix()
-	location := in.GetLocation()
-	return &spec.RewriteRule{Prefix: &prefix, Location: &location}
+	return &spec.RewriteRule{Prefix: in.GetPrefix(), Location: in.GetLocation()}
 }
 
 func accessFromProto(policy *grpcpb.AccessPolicy) spec.AccessPolicy {

@@ -101,42 +101,27 @@ identity headers and injects:
 - `X-Arupa-User`
 - one `X-Arupa-Group` value per verified group
 
-An HTTP route pattern is an external mount point. By default, the matched route
-prefix is removed before dispatch to HTTP RPC, static, or proxy transports:
+HTTP RPC, static, and proxy routes preserve the matched route prefix by
+default. Routes can explicitly remove it before transport dispatch:
 
 ```yaml
 http:
   pattern: /app/
   rewrite:
+    prefix: true
     location: true
 ```
 
-For example, `/app/users?q=1` is dispatched as `/users?q=1`. HTTP RPC and proxy
-transports receive a kernel-owned `X-Forwarded-Prefix: /app` header. Query,
-Host, and request headers otherwise retain their existing behavior. The root
-pattern `/` has no mount prefix, so its path is unchanged.
+For example, `/app/users?q=1` is dispatched as `/users?q=1`. Query, Host, and
+request headers otherwise retain their existing behavior.
 
-`location` defaults to false. When enabled, it prepends the removed prefix to
-root-relative downstream `Location` response headers. Relative,
-scheme-relative, and absolute locations are unchanged. A route can explicitly
-preserve its external path:
-
-```yaml
-http:
-  pattern: /legacy/
-  rewrite:
-    prefix: false
-```
-
-`location: true` is invalid when `prefix` is explicitly false. This default
-prefix behavior applies within contract version 2 and intentionally changes
-the earlier proxy and HTTP RPC path-preservation behavior.
-
-The kernel owns these defaults: `prefix` defaults to true and `location`
-defaults to false. The internal rule represents both values as optional
-booleans. The protobuf `RewriteRule` fields are deliberately non-optional; when
-a service sends that message, both values are treated as explicit. A service
-omits the entire `rewrite` message to use the kernel defaults.
+Both `prefix` and `location` are ordinary booleans and default to false in the
+kernel. When `prefix` is enabled, HTTP RPC and proxy transports receive a
+kernel-owned `X-Forwarded-Prefix` header. When `location` is also enabled, the
+kernel prepends the removed prefix to root-relative downstream `Location`
+response headers. Relative, scheme-relative, and absolute locations are
+unchanged. `location: true` is invalid without `prefix: true`. The root pattern
+`/` has no removable mount prefix, so enabling these rules there is a no-op.
 
 ## Kernel package boundaries
 
